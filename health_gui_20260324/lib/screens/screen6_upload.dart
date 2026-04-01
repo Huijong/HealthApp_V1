@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class Screen6Upload extends StatefulWidget {
   const Screen6Upload({super.key});
@@ -37,25 +39,104 @@ class _Screen6UploadState extends State<Screen6Upload> {
     });
   }
 
-  Future<void> _pickFiles(String type) async {
-    try {
-      FilePickerResult? result;
-      if (type == 'Cola') {
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['zip'],
-          allowMultiple: true,
-        );
-        if (result != null) {
-          final validFiles = result.files.where((f) => f.name.toUpperCase().startsWith('COLA_')).toList();
-          if (validFiles.isEmpty && result.files.isNotEmpty) {
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('COLA_ 형식으로 시작하는 파일이 없습니다.')));
-          } else {
-            setState(() => _colaFiles.addAll(validFiles));
+  Future<List<PlatformFile>> _pickCustomFiles(String prefixFilter, String extension) async {
+    if (await Permission.manageExternalStorage.request().isGranted || 
+        await Permission.storage.request().isGranted) {
+      
+      final dir = Directory('/storage/emulated/0/Documents/COLA_FILE');
+      if (!await dir.exists()) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('/sdcard/Documents/COLA_FILE 폴더가 존재하지 않습니다.')));
+        return [];
+      }
+
+      final List<File> availableFiles = [];
+      try {
+        final entities = dir.listSync();
+        for (var entity in entities) {
+          if (entity is File) {
+            final fileName = entity.uri.pathSegments.last;
+            if (fileName.toLowerCase().endsWith(extension) && 
+                fileName.toUpperCase().startsWith(prefixFilter.toUpperCase())) {
+              availableFiles.add(entity);
+            }
           }
         }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('폴더 읽기 오류: $e')));
+        return [];
+      }
+
+      if (availableFiles.isEmpty) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('해당 폴더에 조건에 맞는 파일("$prefixFilter...")이 없습니다.')));
+        return [];
+      }
+
+      List<File> selectedFiles = [];
+      bool? isConfirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: Text('파일 선택 ($prefixFilter...)', style: const TextStyle(fontSize: 16)),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 300,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: availableFiles.length,
+                    itemBuilder: (context, index) {
+                      final file = availableFiles[index];
+                      final isSelected = selectedFiles.contains(file);
+                      return CheckboxListTile(
+                        title: Text(file.uri.pathSegments.last, style: const TextStyle(fontSize: 13)),
+                        value: isSelected,
+                        onChanged: (bool? value) {
+                          setDialogState(() {
+                            if (value == true) {
+                              selectedFiles.add(file);
+                            } else {
+                              selectedFiles.remove(file);
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+                  ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('선택 완료')),
+                ],
+              );
+            }
+          );
+        }
+      );
+
+      if (isConfirmed == true && selectedFiles.isNotEmpty) {
+        return selectedFiles.map((f) => PlatformFile(
+          name: f.uri.pathSegments.last,
+          size: f.lengthSync(),
+          path: f.path,
+        )).toList();
+      }
+      return [];
+    } else {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('저장소 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.')));
+      return [];
+    }
+  }
+
+  Future<void> _pickFiles(String type) async {
+    try {
+      if (type == 'Cola') {
+        final newFiles = await _pickCustomFiles('COLA_FILE_', '.zip');
+        if (newFiles.isNotEmpty) {
+          setState(() => _colaFiles.addAll(newFiles));
+        }
       } else if (type == 'Capture') {
-        result = await FilePicker.platform.pickFiles(
+        FilePickerResult? result = await FilePicker.platform.pickFiles(
           type: FileType.image,
           allowMultiple: true,
         );
@@ -64,18 +145,9 @@ class _Screen6UploadState extends State<Screen6Upload> {
           setState(() => _captureFiles.addAll(files));
         }
       } else if (type == 'Log') {
-        result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['zip'],
-          allowMultiple: true,
-        );
-        if (result != null) {
-          final validFiles = result.files.where((f) => f.name.toLowerCase().startsWith('log_')).toList();
-          if (validFiles.isEmpty && result.files.isNotEmpty) {
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('log_ 로 시작하는 파일이 없습니다.')));
-          } else {
-            setState(() => _logFiles.addAll(validFiles));
-          }
+        final newFiles = await _pickCustomFiles('log_', '.zip');
+        if (newFiles.isNotEmpty) {
+          setState(() => _logFiles.addAll(newFiles));
         }
       }
     } catch (e) {
@@ -186,11 +258,11 @@ class _Screen6UploadState extends State<Screen6Upload> {
             children: [
               _buildSectionTitle('업로드 파일', isDark),
               const SizedBox(height: 12),
-              _buildUploadCard('Cola', 'Cola 파일(.zip)을 선택해 주세요', Icons.file_download, theme, isDark, primaryColor, _colaFiles),
+              _buildUploadCard('Cola', '"COLA_FILE_" 로 시작하는 압축파일(.zip)', Icons.file_download, theme, isDark, primaryColor, _colaFiles),
               const SizedBox(height: 12),
               _buildUploadCard('Capture', '화면 캡처 이미지 파일을 선택해 주세요', Icons.image, theme, isDark, primaryColor, _captureFiles),
               const SizedBox(height: 12),
-              _buildUploadCard('Log', '로그 파일(.zip)을 선택해 주세요', Icons.folder_zip, theme, isDark, primaryColor, _logFiles),
+              _buildUploadCard('Log', '"log_" 로 시작하는 압축파일(.zip)', Icons.folder_zip, theme, isDark, primaryColor, _logFiles),
 
               const SizedBox(height: 40),
 
