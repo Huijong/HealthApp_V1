@@ -39,13 +39,13 @@ class _Screen6UploadState extends State<Screen6Upload> {
     });
   }
 
-  Future<List<PlatformFile>> _pickCustomFiles(String prefixFilter, String extension) async {
+  Future<List<PlatformFile>> _pickCustomFiles(String dirPath, String prefixFilter, List<String> extensions, {bool isImageMode = false}) async {
     if (await Permission.manageExternalStorage.request().isGranted || 
         await Permission.storage.request().isGranted) {
       
-      final dir = Directory('/storage/emulated/0/Documents/COLA_FILE');
+      final dir = Directory(dirPath);
       if (!await dir.exists()) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('/sdcard/Documents/COLA_FILE 폴더가 존재하지 않습니다.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$dirPath 폴더가 존재하지 않습니다.')));
         return [];
       }
 
@@ -55,8 +55,11 @@ class _Screen6UploadState extends State<Screen6Upload> {
         for (var entity in entities) {
           if (entity is File) {
             final fileName = entity.uri.pathSegments.last;
-            if (fileName.toLowerCase().endsWith(extension) && 
-                fileName.toUpperCase().startsWith(prefixFilter.toUpperCase())) {
+            final lowerName = fileName.toLowerCase();
+            final matchesExt = extensions.isEmpty || extensions.any((ext) => lowerName.endsWith(ext));
+            final matchesPrefix = prefixFilter.isEmpty || fileName.toUpperCase().startsWith(prefixFilter.toUpperCase());
+            
+            if (matchesExt && matchesPrefix) {
               availableFiles.add(entity);
             }
           }
@@ -66,8 +69,9 @@ class _Screen6UploadState extends State<Screen6Upload> {
         return [];
       }
 
+      String userFriendlyFilter = prefixFilter.isNotEmpty ? '("$prefixFilter...") ' : '';
       if (availableFiles.isEmpty) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('해당 폴더에 조건에 맞는 파일("$prefixFilter...")이 없습니다.')));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('조건에 맞는 ${userFriendlyFilter}파일이 없습니다.')));
         return [];
       }
 
@@ -77,32 +81,92 @@ class _Screen6UploadState extends State<Screen6Upload> {
         builder: (context) {
           return StatefulBuilder(
             builder: (context, setDialogState) {
+              String titleText = prefixFilter.isNotEmpty ? '파일 선택 ($prefixFilter...)' : '이미지 파일 선택';
               return AlertDialog(
-                title: Text('파일 선택 ($prefixFilter...)', style: const TextStyle(fontSize: 16)),
+                title: Text(titleText, style: const TextStyle(fontSize: 16)),
                 content: SizedBox(
                   width: double.maxFinite,
-                  height: 300,
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: availableFiles.length,
-                    itemBuilder: (context, index) {
-                      final file = availableFiles[index];
-                      final isSelected = selectedFiles.contains(file);
-                      return CheckboxListTile(
-                        title: Text(file.uri.pathSegments.last, style: const TextStyle(fontSize: 13)),
-                        value: isSelected,
-                        onChanged: (bool? value) {
-                          setDialogState(() {
-                            if (value == true) {
-                              selectedFiles.add(file);
-                            } else {
-                              selectedFiles.remove(file);
-                            }
-                          });
+                  height: 380, // slightly taller for grid
+                  child: isImageMode
+                    ? GridView.builder(
+                        shrinkWrap: true,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 4,
+                          mainAxisSpacing: 4,
+                        ),
+                        itemCount: availableFiles.length,
+                        itemBuilder: (context, index) {
+                          final file = availableFiles[index];
+                          final isSelected = selectedFiles.contains(file);
+                          return GestureDetector(
+                            onTap: () {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  selectedFiles.remove(file);
+                                } else {
+                                  selectedFiles.add(file);
+                                }
+                              });
+                            },
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.file(
+                                  file,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c, e, s) => const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                                ),
+                                if (isSelected)
+                                  Container(
+                                    color: Colors.black45,
+                                    alignment: Alignment.center,
+                                    child: const Icon(Icons.check_circle, color: Colors.white, size: 36),
+                                  ),
+                              ],
+                            ),
+                          );
                         },
-                      );
-                    },
-                  ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: availableFiles.length,
+                        itemBuilder: (context, index) {
+                          final file = availableFiles[index];
+                          final isSelected = selectedFiles.contains(file);
+                          
+                          final lowerName = file.path.toLowerCase();
+                          final isImage = lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.webp') || lowerName.endsWith('.bmp');
+                          
+                          Widget thumbnail = isImage
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.file(
+                                    file,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 44),
+                                  ),
+                                )
+                              : const Icon(Icons.folder_zip, size: 44, color: Colors.grey);
+
+                          return CheckboxListTile(
+                            secondary: thumbnail,
+                            title: Text(file.uri.pathSegments.last, style: const TextStyle(fontSize: 13)),
+                            value: isSelected,
+                            onChanged: (bool? value) {
+                              setDialogState(() {
+                                if (value == true) {
+                                  selectedFiles.add(file);
+                                } else {
+                                  selectedFiles.remove(file);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
                 ),
                 actions: [
                   TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
@@ -131,21 +195,17 @@ class _Screen6UploadState extends State<Screen6Upload> {
   Future<void> _pickFiles(String type) async {
     try {
       if (type == 'Cola') {
-        final newFiles = await _pickCustomFiles('COLA_FILE_', '.zip');
+        final newFiles = await _pickCustomFiles('/storage/emulated/0/Documents/COLA_FILE', 'COLA_FILE_', ['.zip']);
         if (newFiles.isNotEmpty) {
           setState(() => _colaFiles.addAll(newFiles));
         }
       } else if (type == 'Capture') {
-        FilePickerResult? result = await FilePicker.platform.pickFiles(
-          type: FileType.image,
-          allowMultiple: true,
-        );
-        if (result != null) {
-          final files = result.files;
-          setState(() => _captureFiles.addAll(files));
+        final newFiles = await _pickCustomFiles('/storage/emulated/0/DCIM/Screenshots', '', ['.jpg', '.jpeg', '.png', '.webp', '.bmp'], isImageMode: true);
+        if (newFiles.isNotEmpty) {
+          setState(() => _captureFiles.addAll(newFiles));
         }
       } else if (type == 'Log') {
-        final newFiles = await _pickCustomFiles('log_', '.zip');
+        final newFiles = await _pickCustomFiles('/storage/emulated/0/Documents/COLA_FILE', 'log_', ['.zip']);
         if (newFiles.isNotEmpty) {
           setState(() => _logFiles.addAll(newFiles));
         }
@@ -260,7 +320,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
               const SizedBox(height: 12),
               _buildUploadCard('Cola', '"COLA_FILE_" 로 시작하는 압축파일(.zip)', Icons.file_download, theme, isDark, primaryColor, _colaFiles),
               const SizedBox(height: 12),
-              _buildUploadCard('Capture', '화면 캡처 이미지 파일을 선택해 주세요', Icons.image, theme, isDark, primaryColor, _captureFiles),
+              _buildUploadCard('Capture', '/sdcard/DCIM/Screenshots/ 내 이미지', Icons.image, theme, isDark, primaryColor, _captureFiles),
               const SizedBox(height: 12),
               _buildUploadCard('Log', '"log_" 로 시작하는 압축파일(.zip)', Icons.folder_zip, theme, isDark, primaryColor, _logFiles),
 
