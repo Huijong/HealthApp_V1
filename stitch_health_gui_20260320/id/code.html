@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;family=Noto+Sans+KR:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#22c55e",
+                        "background-light": "#F2F2F2",
+                        "background-dark": "#121212",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "Noto Sans KR", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.5rem",
+                        "3xl": "2rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            min-height: 100dvh;
+            background-color: #F2F2F2;
+        }
+        .oneui-card {
+            background-color: white;
+            border-radius: 1.75rem; /* ~28px */
+        }
+        .dark .oneui-card {
+            background-color: #1E1E1E;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 flex flex-col">
+<!-- TopAppBar -->
+<header class="flex items-center px-4 py-6 sticky top-0 z-10">
+<div class="flex items-center max-w-md mx-auto w-full">
+<button class="text-slate-900 dark:text-slate-100 flex size-12 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors focus:outline-none" style="">
+<span class="material-symbols-outlined text-2xl" style="">arrow_back</span>
+</button>
+<h2 class="text-xl font-semibold leading-tight tracking-tight ml-2" style="">ID 입력</h2>
+</div>
+</header>
+<main class="flex-1 flex flex-col px-6 pb-8 max-w-md mx-auto w-full">
+<!-- Title Section (One UI Large Header Style) -->
+<div class="px-2 pt-4 mb-4">
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal leading-relaxed" style="">서비스 이용을 위해 본인의 ID를 입력해 주세요.</p>
+</div>
+<!-- Main Content Card -->
+<div class="oneui-card p-8 shadow-sm flex flex-col gap-8">
+<!-- Illustration/Icon Section -->
+<div class="flex justify-center">
+<div class="relative w-28 h-28 flex items-center justify-center bg-primary/10 dark:bg-primary/20 rounded-full">
+<span class="material-symbols-outlined text-primary text-[56px]" style="">account_circle</span>
+<div class="absolute -bottom-1 -right-1 bg-primary text-white p-2 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-[18px]" style="">fingerprint</span>
+</div>
+</div>
+</div>
+<!-- Input Field -->
+<div class="flex flex-col gap-6">
+<label class="flex flex-col w-full" style="">
+<span class="text-[13px] font-semibold text-primary mb-2 ml-1" style="">아이디</span>
+<input class="form-input flex w-full rounded-2xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/40 border-none bg-slate-100 dark:bg-slate-800 h-14 placeholder:text-slate-400 dark:placeholder:text-slate-500 px-5 text-base font-normal transition-all" placeholder="아이디를 입력하세요" type="text"/>
+</label>
+<div class="flex items-start gap-2 px-1">
+<span class="material-symbols-outlined text-primary text-lg mt-0.5" style="">info</span>
+<p class="text-sm text-slate-500 dark:text-slate-400 font-normal leading-snug" style="">최초 가입 시 설정한 아이디를 입력해 주세요.</p>
+</div>
+</div>
+</div>
+<!-- Optional Decorative Element or Secondary Card -->
+<div class="mt-6 oneui-card p-6 opacity-60 overflow-hidden">
+<div class="w-full h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-2xl flex items-center justify-center relative">
+<div class="w-full h-full bg-center bg-no-repeat bg-cover grayscale mix-blend-overlay opacity-30" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCNe8p2jrBcZxkp7-6b-59uAjNJI8ceFkdJy2LGheuUg4QOL72nN-xNJUzuZ3nfqMwU_oJRK7mFI-OVK6IhRLjdLCR5WkPNVileQyMFQzpFw2j1q63AvMnIssIqDeKc3o41tLPyH1zA26lgQm8E2c1AX4-QGrbcbdjm98Lu3XGZRaqJ2MWMHxcN0_ahhZOHG6Btmbfu4T7Jb6EYN4Trz_jjy6I3ehjND43rez4VCHZkjlhwgofZNzJEDGgfdl2mRM-Wj2nO6duNxIA");'></div>
+<span class="absolute text-slate-400 dark:text-slate-600 text-xs font-medium" style="">SECURITY VERIFIED</span>
+</div>
+</div>
+</main>
+<!-- Bottom Button Container (Floating style for One UI) -->
+<footer class="p-4 pt-2 pb-8 max-w-md mx-auto w-full bg-background-light dark:bg-background-dark">
+<button class="w-full h-14 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]" style="">저장하기</button>
+</footer>
+</body></html>

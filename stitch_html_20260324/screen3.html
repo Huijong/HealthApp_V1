@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#22C55E",
+                        "background-light": "#F2F2F7",
+                        "background-dark": "#121212",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.5rem",
+                        "lg": "1rem",
+                        "xl": "1.5rem",
+                        "2xl": "1.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Public Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-radio:checked {
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3.5'/%3e%3c/svg%3e");
+            background-color: #22C55E;
+            border-color: #22C55E;
+        }
+        /* One UI style shadow */
+        .one-ui-card {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center px-6 h-16 max-w-md mx-auto">
+<button class="p-2 -ml-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined block">arrow_back</span>
+</button>
+<h1 class="flex-1 text-xl font-semibold ml-2">워치 선택</h1>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto px-6 py-4 max-w-md mx-auto w-full">
+<div class="space-y-4 pb-8">
+<!-- Option 1: Watch8 Classic -->
+<label class="group relative flex items-center gap-4 rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900 p-5 cursor-pointer one-ui-card transition-all has-[:checked]:border-primary/60 has-[:checked]:ring-1 has-[:checked]:ring-primary/60">
+<div class="flex-1">
+<p class="font-bold text-[17px] text-slate-900 dark:text-slate-100 mb-0.5">Watch8 Classic</p>
+<p class="text-[14px] text-slate-500 dark:text-slate-400">Classic design with rotating bezel</p>
+</div>
+<input checked="" class="custom-radio h-6 w-6 border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" name="watch-model" type="radio"/>
+</label>
+<!-- Option 2: Watch8 44mm -->
+<label class="group relative flex items-center gap-4 rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900 p-5 cursor-pointer one-ui-card transition-all has-[:checked]:border-primary/60 has-[:checked]:ring-1 has-[:checked]:ring-primary/60">
+<div class="flex-1">
+<p class="font-bold text-[17px] text-slate-900 dark:text-slate-100 mb-0.5">Watch8 44mm</p>
+<p class="text-[14px] text-slate-500 dark:text-slate-400">Large display for active lifestyle</p>
+</div>
+<input class="custom-radio h-6 w-6 border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" name="watch-model" type="radio"/>
+</label>
+<!-- Option 3: Watch8 40mm -->
+<label class="group relative flex items-center gap-4 rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900 p-5 cursor-pointer one-ui-card transition-all has-[:checked]:border-primary/60 has-[:checked]:ring-1 has-[:checked]:ring-primary/60">
+<div class="flex-1">
+<p class="font-bold text-[17px] text-slate-900 dark:text-slate-100 mb-0.5">Watch8 40mm</p>
+<p class="text-[14px] text-slate-500 dark:text-slate-400">Compact and lightweight design</p>
+</div>
+<input class="custom-radio h-6 w-6 border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" name="watch-model" type="radio"/>
+</label>
+<!-- Option 4: Watch 7 44mm -->
+<label class="group relative flex items-center gap-4 rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900 p-5 cursor-pointer one-ui-card transition-all has-[:checked]:border-primary/60 has-[:checked]:ring-1 has-[:checked]:ring-primary/60">
+<div class="flex-1">
+<p class="font-bold text-[17px] text-slate-900 dark:text-slate-100 mb-0.5">Watch 7 44mm</p>
+<p class="text-[14px] text-slate-500 dark:text-slate-400">Active style with large display</p>
+</div>
+<input class="custom-radio h-6 w-6 border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" name="watch-model" type="radio"/>
+</label>
+<!-- Option 5: Watch Ultra 1 -->
+<label class="group relative flex items-center gap-4 rounded-2xl border-2 border-transparent bg-white dark:bg-slate-900 p-5 cursor-pointer one-ui-card transition-all has-[:checked]:border-primary/60 has-[:checked]:ring-1 has-[:checked]:ring-primary/60">
+<div class="flex-1">
+<p class="font-bold text-[17px] text-slate-900 dark:text-slate-100 mb-0.5">Watch Ultra 1</p>
+<p class="text-[14px] text-slate-500 dark:text-slate-400">Maximum endurance and performance</p>
+</div>
+<input class="custom-radio h-6 w-6 border-2 border-slate-300 dark:border-slate-600 bg-transparent text-primary focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" name="watch-model" type="radio"/>
+</label>
+</div>
+</main>
+<footer class="sticky bottom-0 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md px-6 py-6">
+<div class="max-w-md mx-auto">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all active:scale-[0.97] text-lg">
+                선택 완료
+            </button>
+</div>
+</footer>
+</body></html>

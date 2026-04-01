@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+
+<html lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings - Momentum Core</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#22C55E",
+                        "on-primary": "#ffffff",
+                        "background": "#F2F2F2",
+                        "surface": "#ffffff",
+                        "on-surface": "#1A1A1A",
+                        "on-surface-variant": "#757575",
+                        "outline": "#E0E0E0",
+                        "surface-container-low": "#F7F7F7",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#EEEEEE",
+                        "primary-container": "#22C55E",
+                        "on-primary-container": "#ffffff",
+                    },
+                    fontFamily: {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: { 
+                        "DEFAULT": "1.5rem",
+                        "lg": "1.5rem",
+                        "xl": "2rem",
+                        "full": "9999px" 
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Manrope', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface min-h-screen">
+<!-- TopAppBar -->
+<header class="bg-background/80 backdrop-blur-md sticky top-0 z-50">
+<div class="flex items-center gap-4 w-full px-8 py-6 max-w-screen-xl mx-auto">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined text-on-surface" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="text-2xl font-bold text-on-surface tracking-tight">설정</h1>
+</div>
+</header>
+<main class="max-w-screen-xl mx-auto px-8 pb-16 space-y-10 pt-6">
+<!-- Title Section -->
+<!-- Main User Settings Menu Cards Area -->
+<div class="space-y-4">
+<!-- 1. 신체 정보 Card -->
+<button class="group w-full text-left bg-surface p-8 rounded-xl flex items-center justify-between transition-all duration-200 shadow-sm active:scale-[0.98]">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="person_celebrate">person_celebrate</span>
+</div>
+<div class="space-y-1">
+<span class="text-[0.75rem] font-bold text-on-surface-variant uppercase tracking-wider">Biometrics</span>
+<h3 class="text-xl font-bold text-on-surface leading-tight">신체 정보</h3>
+<p class="text-sm text-on-surface-variant">남성, 180cm, 75kg</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="material-symbols-outlined text-on-surface-variant/40 group-hover:translate-x-1 transition-transform" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- 2. 워치 모델 Card -->
+<button class="group w-full text-left bg-surface p-8 rounded-xl flex items-center justify-between transition-all duration-200 shadow-sm active:scale-[0.98]">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="watch">watch</span>
+</div>
+<div class="space-y-1">
+<span class="text-[0.75rem] font-bold text-on-surface-variant uppercase tracking-wider">Device Info</span>
+<h3 class="text-xl font-bold text-on-surface leading-tight">워치 모델</h3>
+<p class="text-sm text-on-surface-variant">Galaxy Watch Ultra 1</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="px-3 py-1 rounded-full bg-primary text-[0.7rem] font-bold text-white uppercase tracking-wider">Connected</span>
+<span class="material-symbols-outlined text-on-surface-variant/40 group-hover:translate-x-1 transition-transform" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+<!-- 3. 스트랩 선택 Card -->
+<button class="group w-full text-left bg-surface p-8 rounded-xl flex items-center justify-between transition-all duration-200 shadow-sm active:scale-[0.98]">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="watch_button_press">watch_button_press</span>
+</div>
+<div class="space-y-1">
+<span class="text-[0.75rem] font-bold text-on-surface-variant uppercase tracking-wider">Accessories</span>
+<h3 class="text-xl font-bold text-on-surface leading-tight">스트랩 선택</h3>
+<p class="text-sm text-on-surface-variant">스포츠 밴드 (S/M)</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-on-surface-variant/40 group-hover:translate-x-1 transition-transform" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+</div>
+<!-- Separated Admin Section -->
+<section class="space-y-4">
+<h2 class="text-[0.85rem] font-bold text-on-surface-variant uppercase tracking-[0.15em] px-2">System Administration</h2>
+<!-- 4. 관리자 모드 Card -->
+<button class="group w-full text-left p-8 rounded-xl flex items-center justify-between transition-all duration-200 border border-primary/10 shadow-sm active:scale-[0.98] bg-primary/5">
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="admin_panel_settings">admin_panel_settings</span>
+</div>
+<div class="space-y-1">
+<span class="text-[0.75rem] font-bold text-primary uppercase tracking-wider">Admin</span>
+<h3 class="text-xl font-bold text-on-surface leading-tight">관리자 모드</h3>
+<p class="text-sm text-on-surface-variant">시스템 설정 및 로그 관리</p>
+</div>
+</div>
+<div class="flex items-center">
+<span class="material-symbols-outlined text-primary/60 group-hover:translate-x-1 transition-transform" data-icon="chevron_right">chevron_right</span>
+</div>
+</button>
+</section>
+<!-- System Status Cards -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface p-7 rounded-xl shadow-sm">
+<span class="text-[0.7rem] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Battery</span>
+<p class="text-2xl font-bold text-on-surface">84%</p>
+<div class="flex gap-1.5 mt-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container"></div>
+</div>
+</div>
+<div class="bg-surface p-7 rounded-xl shadow-sm">
+<span class="text-[0.7rem] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">Storage</span>
+<p class="text-2xl font-bold text-on-surface">12.4 GB</p>
+<div class="flex gap-1.5 mt-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container"></div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="pt-12 pb-8 flex flex-col items-center space-y-6">
+<div class="flex gap-8">
+<a class="text-[0.75rem] font-bold text-on-surface-variant hover:text-primary transition-colors uppercase tracking-[0.1em]" href="#">Terms</a>
+<a class="text-[0.75rem] font-bold text-on-surface-variant hover:text-primary transition-colors uppercase tracking-[0.1em]" href="#">Privacy</a>
+<a class="text-[0.75rem] font-bold text-on-surface-variant hover:text-primary transition-colors uppercase tracking-[0.1em]" href="#">Support</a>
+</div>
+<p class="text-[0.7rem] font-medium text-on-surface-variant/50 uppercase tracking-widest">Momentum Core v2.4.0 • 2024</p>
+</footer>
+</main>
+</body></html>
