@@ -86,14 +86,14 @@ class _Screen6UploadState extends State<Screen6Upload> {
                 title: Text(titleText, style: const TextStyle(fontSize: 16)),
                 content: SizedBox(
                   width: double.maxFinite,
-                  height: 380, // slightly taller for grid
+                  height: 460, // taller for larger grid items
                   child: isImageMode
                     ? GridView.builder(
                         shrinkWrap: true,
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
                         ),
                         itemCount: availableFiles.length,
                         itemBuilder: (context, index) {

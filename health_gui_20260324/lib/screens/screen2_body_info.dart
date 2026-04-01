@@ -127,6 +127,7 @@ class _Screen2BodyInfoState extends State<Screen2BodyInfo> {
                     initialDate: _selectedDate,
                     firstDate: DateTime(1900),
                     lastDate: DateTime.now(),
+                    locale: const Locale('ko', 'KR'),
                   );
                   if (picked != null && picked != _selectedDate) {
                     setState(() {
