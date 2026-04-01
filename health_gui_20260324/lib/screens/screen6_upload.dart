@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 
 class Screen6Upload extends StatefulWidget {
   const Screen6Upload({super.key});
@@ -13,6 +15,130 @@ class _Screen6UploadState extends State<Screen6Upload> {
   String _training = '조깅';
   final TextEditingController _locationController = TextEditingController();
   final List<String> _trainingOptions = ['조깅', '인터벌', 'LSD', '변속주', '지속주'];
+
+  List<PlatformFile> _colaFiles = [];
+  List<PlatformFile> _captureFiles = [];
+  List<PlatformFile> _logFiles = [];
+  final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
+
+  Future<void> _pickFiles(String type) async {
+    try {
+      FilePickerResult? result;
+      if (type == 'Cola') {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['zip'],
+          allowMultiple: true,
+        );
+        if (result != null) {
+          final validFiles = result.files.where((f) => f.name.toUpperCase().startsWith('COLA_')).toList();
+          if (validFiles.isEmpty && result.files.isNotEmpty) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('COLA_ 형식으로 시작하는 파일이 없습니다.')));
+          } else {
+            setState(() => _colaFiles.addAll(validFiles));
+          }
+        }
+      } else if (type == 'Capture') {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: true,
+        );
+        if (result != null) {
+          final files = result.files;
+          setState(() => _captureFiles.addAll(files));
+        }
+      } else if (type == 'Log') {
+        result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['zip'],
+          allowMultiple: true,
+        );
+        if (result != null) {
+          final validFiles = result.files.where((f) => f.name.toLowerCase().startsWith('log_')).toList();
+          if (validFiles.isEmpty && result.files.isNotEmpty) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('log_ 로 시작하는 파일이 없습니다.')));
+          } else {
+            setState(() => _logFiles.addAll(validFiles));
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('파일 선택 오류: $e')));
+      }
+    }
+  }
+
+  Future<void> _uploadFiles() async {
+    if (_colaFiles.isEmpty && _captureFiles.isEmpty && _logFiles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드할 파일을 먼저 선택하세요.')));
+      return;
+    }
+
+    _progressNotifier.value = 0.0;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return ValueListenableBuilder<double>(
+          valueListenable: _progressNotifier,
+          builder: (context, progress, child) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: const Text('파일 업로드 중...', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 12,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('${(progress * 100).toStringAsFixed(1)}% 완료', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    try {
+      final dio = Dio();
+      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
+      int uploadedCount = 0;
+
+      for (var file in allFiles) {
+        if (file.path != null) {
+          final formData = FormData.fromMap({
+            'file': await MultipartFile.fromFile(file.path!, filename: file.name),
+          });
+
+          await dio.post(
+            'https://health-port.work/upload',
+            data: formData,
+            options: Options(
+              headers: {
+                'x-api-key': 'my_private_key_50',
+              },
+            ),
+          );
+        }
+        uploadedCount++;
+        _progressNotifier.value = uploadedCount / allFiles.length;
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close dialog
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드 성공!')));
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close dialog
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('업로드 실패: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +162,11 @@ class _Screen6UploadState extends State<Screen6Upload> {
             children: [
               _buildSectionTitle('업로드 파일', isDark),
               const SizedBox(height: 12),
-              _buildUploadCard('Cola', 'Cola 파일(.gpx)을 선택해 주세요', Icons.file_download, theme, isDark, primaryColor),
+              _buildUploadCard('Cola', 'Cola 파일(.zip)을 선택해 주세요', Icons.file_download, theme, isDark, primaryColor, _colaFiles),
               const SizedBox(height: 12),
-              _buildUploadCard('Capture', '화면 캡처 이미지 파일을 선택해 주세요', Icons.image, theme, isDark, primaryColor),
+              _buildUploadCard('Capture', '화면 캡처 이미지 파일을 선택해 주세요', Icons.image, theme, isDark, primaryColor, _captureFiles),
               const SizedBox(height: 12),
-              _buildUploadCard('Log', '로그 파일(.zip)을 선택해 주세요', Icons.folder_zip, theme, isDark, primaryColor),
+              _buildUploadCard('Log', '로그 파일(.zip)을 선택해 주세요', Icons.folder_zip, theme, isDark, primaryColor, _logFiles),
 
               const SizedBox(height: 40),
 
@@ -206,9 +332,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Go back home or somewhere else
-              },
+              onPressed: _uploadFiles,
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
                 foregroundColor: Colors.white,
@@ -248,55 +372,77 @@ class _Screen6UploadState extends State<Screen6Upload> {
     );
   }
 
-  Widget _buildUploadCard(String title, String subtitle, IconData icon, ThemeData theme, bool isDark, Color primary) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+  Widget _buildUploadCard(String title, String subtitle, IconData icon, ThemeData theme, bool isDark, Color primary, List<PlatformFile> selectedFiles) {
+    return GestureDetector(
+      onTap: () => _pickFiles(title),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: selectedFiles.isNotEmpty ? primary.withOpacity(0.6) : Colors.transparent,
+            width: 1.5,
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(icon, color: primary, size: 28),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.grey[900],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey[400] : Colors.grey[500],
-                  ),
-                ),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: selectedFiles.isNotEmpty ? primary : primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                selectedFiles.isNotEmpty ? Icons.check : icon,
+                color: selectedFiles.isNotEmpty ? Colors.white : primary,
+                size: 28,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.grey[900],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (selectedFiles.isEmpty)
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? Colors.grey[400] : Colors.grey[500],
+                      ),
+                    )
+                  else
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: selectedFiles.map((file) => Text(
+                        file.name,
+                        style: TextStyle(fontSize: 12, color: primary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )).toList(),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
