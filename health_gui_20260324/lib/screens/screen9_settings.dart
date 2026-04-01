@@ -9,6 +9,7 @@ class Screen9Settings extends StatefulWidget {
 }
 
 class _Screen9SettingsState extends State<Screen9Settings> {
+  String _userIdSubtitle = '설정되지 않음';
   String _bodyInfoSubtitle = '설정되지 않음';
   String _watchModelSubtitle = '설정되지 않음';
   String _strapSubtitle = '설정되지 않음';
@@ -22,6 +23,9 @@ class _Screen9SettingsState extends State<Screen9Settings> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     
+    // Load User ID
+    String userId = prefs.getString('Id') ?? '설정되지 않음';
+
     // Load Body Info
     String gender = prefs.getString('gender') == 'female' ? '여성' : (prefs.getString('gender') == 'male' ? '남성' : '');
     String height = prefs.getString('height') ?? '';
@@ -39,6 +43,7 @@ class _Screen9SettingsState extends State<Screen9Settings> {
     String strap = prefs.getString('selectedStrap') ?? '설정되지 않음';
 
     setState(() {
+      _userIdSubtitle = userId;
       _bodyInfoSubtitle = bodyInfo.isNotEmpty ? bodyInfo.join(', ') : '설정되지 않음';
       _watchModelSubtitle = watchModel;
       _strapSubtitle = strap;
@@ -65,6 +70,18 @@ class _Screen9SettingsState extends State<Screen9Settings> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildSettingMenuCard(
+                context,
+                icon: Icons.badge,
+                category: 'Account',
+                title: '아이디',
+                subtitle: _userIdSubtitle,
+                route: '/screen1', // Will go back to screen 1 to let them edit id
+                theme: theme,
+                isDark: isDark,
+                primaryColor: primaryColor,
+              ),
+              const SizedBox(height: 16),
               _buildSettingMenuCard(
                 context,
                 icon: Icons.person,

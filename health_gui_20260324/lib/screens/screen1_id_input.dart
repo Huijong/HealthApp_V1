@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Screen1IdInput extends StatefulWidget {
   const Screen1IdInput({super.key});
@@ -169,8 +170,15 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/screen2');
+                  onPressed: () async {
+                    final userId = _idController.text.trim();
+                    if (userId.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('아이디를 입력해 주세요.')));
+                      return;
+                    }
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setString('Id', userId);
+                    if (context.mounted) Navigator.pushNamed(context, '/screen2');
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,

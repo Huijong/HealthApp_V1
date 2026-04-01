@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Screen6Upload extends StatefulWidget {
   const Screen6Upload({super.key});
@@ -10,16 +11,31 @@ class Screen6Upload extends StatefulWidget {
 }
 
 class _Screen6UploadState extends State<Screen6Upload> {
+  String _userId = 'Unknown';
   String _pos = '왼쪽';
   String _fit = '적당히';
   String _training = '조깅';
   final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _remarksController = TextEditingController();
   final List<String> _trainingOptions = ['조깅', '인터벌', 'LSD', '변속주', '지속주'];
 
   List<PlatformFile> _colaFiles = [];
   List<PlatformFile> _captureFiles = [];
   List<PlatformFile> _logFiles = [];
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _userId = prefs.getString('Id') ?? 'Unknown';
+    });
+  }
 
   Future<void> _pickFiles(String type) async {
     try {
@@ -107,28 +123,36 @@ class _Screen6UploadState extends State<Screen6Upload> {
 
     try {
       final dio = Dio();
-      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
-      int uploadedCount = 0;
+      final formData = FormData.fromMap({
+        'user_id': _userId,
+        'pos': _pos,
+        'fit': _fit,
+        'training': _training,
+        'location': _locationController.text,
+        'remarks': _remarksController.text,
+      });
 
+      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
       for (var file in allFiles) {
         if (file.path != null) {
-          final formData = FormData.fromMap({
-            'file': await MultipartFile.fromFile(file.path!, filename: file.name),
-          });
-
-          await dio.post(
-            'https://health-port.work/upload',
-            data: formData,
-            options: Options(
-              headers: {
-                'x-api-key': 'my_private_key_50',
-              },
-            ),
-          );
+          formData.files.add(MapEntry('files', await MultipartFile.fromFile(file.path!, filename: file.name)));
         }
-        uploadedCount++;
-        _progressNotifier.value = uploadedCount / allFiles.length;
       }
+
+      await dio.post(
+        'https://health-port.work/upload',
+        data: formData,
+        options: Options(
+          headers: {
+            'x-api-key': 'my_private_key_50',
+          },
+        ),
+        onSendProgress: (int sent, int total) {
+          if (total != -1) {
+            _progressNotifier.value = sent / total;
+          }
+        },
+      );
 
       if (!mounted) return;
       Navigator.pop(context); // Close dialog
@@ -310,6 +334,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
                   ],
                 ),
                 child: TextField(
+                  controller: _remarksController,
                   maxLines: 5,
                   decoration: InputDecoration(
                     hintText: '기타 전달하실 내용을 입력해 주세요.',
