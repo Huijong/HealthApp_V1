@@ -1,10 +1,9 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 
 class Screen6Upload extends StatefulWidget {
   const Screen6Upload({super.key});
@@ -255,91 +254,62 @@ class _Screen6UploadState extends State<Screen6Upload> {
     );
 
     try {
-      final dio = Dio();
-      dio.options.headers['x-api-key'] = 'my_private_key_50';
-      dio.options.connectTimeout = const Duration(minutes: 5);
-      dio.options.receiveTimeout = const Duration(minutes: 30);
-      dio.options.sendTimeout = const Duration(minutes: 30);
-
       final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
       if (allFiles.isEmpty) return;
 
-      int totalBytes = allFiles.fold(0, (sum, f) => sum + f.size);
-      int bytesAlreadyUploaded = 0;
+      List<Map<String, dynamic>> mappedFiles = allFiles.map((e) => {
+        'path': e.path,
+        'name': e.name,
+        'size': e.size,
+      }).toList();
 
-      String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-      Map<String, int> chunksMap = {};
-      int chunkSize = 30 * 1024 * 1024; // 30 MB chunks
-
-      for (var platformFile in allFiles) {
-        if (platformFile.path == null) continue;
-        File file = File(platformFile.path!);
-        int fileLength = await file.length();
-        
-        int chunksCount = (fileLength / chunkSize).ceil();
-        if (chunksCount == 0) chunksCount = 1; 
-        chunksMap[platformFile.name] = chunksCount;
-
-        RandomAccessFile raf = await file.open(mode: FileMode.read);
-        
-        for (int i = 0; i < chunksCount; i++) {
-          int bytesToRead = (i == chunksCount - 1) ? fileLength - (i * chunkSize) : chunkSize;
-          List<int> chunkBytes = await raf.read(bytesToRead);
-          
-          var formData = FormData.fromMap({
-            'session_id': sessionId,
-            'filename': platformFile.name,
-            'chunk_index': i,
-            'chunk': MultipartFile.fromBytes(chunkBytes, filename: '${platformFile.name}.part$i'),
-          });
-          
-          await dio.post(
-            'https://health-port.work/upload/chunk',
-            data: formData,
-            onSendProgress: (sent, total) {
-              if (total > 0) {
-                double chunkProgress = sent / total;
-                double overallProgress = (bytesAlreadyUploaded + (bytesToRead * chunkProgress)) / totalBytes;
-                _progressNotifier.value = overallProgress > 1.0 ? 1.0 : overallProgress;
-              }
-            },
-          );
-          bytesAlreadyUploaded += bytesToRead;
-        }
-        await raf.close();
+      final service = FlutterBackgroundService();
+      
+      // 혹시 서비스가 안돌고 있다면 시작
+      bool isRunning = await service.isRunning();
+      if (!isRunning) {
+        await service.startService();
       }
 
-      var completeFormData = FormData.fromMap({
-        'session_id': sessionId,
-        'user_id': _userId,
+      service.invoke('startUpload', {
+        'files': mappedFiles,
+        'userId': _userId,
         'pos': _pos,
         'fit': _fit,
         'training': _training,
         'location': _locationController.text,
         'remarks': _remarksController.text,
-        'total_chunks_map': jsonEncode(chunksMap),
       });
 
-      await dio.post(
-        'https://health-port.work/upload/complete',
-        data: completeFormData,
-      );
-
-      if (!mounted) return;
-      Navigator.pop(context); // Close dialog
-      
-      setState(() {
-         _colaFiles.clear();
-         _captureFiles.clear();
-         _logFiles.clear();
-         _locationController.clear();
-         _remarksController.clear();
+      // 리스너 등록
+      service.on('uploadProgress').listen((event) {
+        if (event != null && mounted) {
+          _progressNotifier.value = event['progress'] as double;
+        }
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드 성공!')));
+
+      service.on('uploadComplete').listen((event) {
+        if (event != null && mounted) {
+           Navigator.pop(context); // Close dialog
+           if (event['success'] == true) {
+              setState(() {
+                 _colaFiles.clear();
+                 _captureFiles.clear();
+                 _logFiles.clear();
+                 _locationController.clear();
+                 _remarksController.clear();
+              });
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드 성공!')));
+           } else {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('업로드 실패: ${event["error"]}')));
+           }
+        }
+      });
+
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context); // Close dialog
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('업로드 실패: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('업로드 시작 실패: $e')));
     }
   }
 

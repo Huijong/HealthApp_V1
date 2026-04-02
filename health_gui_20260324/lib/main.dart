@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'background_uploader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/screen1_id_input.dart';
@@ -18,7 +20,29 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final isSetupComplete = prefs.getBool('isSetupComplete') ?? false;
 
+  await initializeService();
+
   runApp(MyApp(isSetupComplete: isSetupComplete));
+}
+
+Future<void> initializeService() async {
+  final service = FlutterBackgroundService();
+
+  await service.configure(
+    androidConfiguration: AndroidConfiguration(
+      onStart: onStart,
+      autoStart: false,
+      isForegroundMode: true,
+      foregroundServiceNotificationId: 888,
+    ),
+    iosConfiguration: IosConfiguration(
+      autoStart: false,
+      onForeground: onStart,
+      onBackground: (ServiceInstance service) {
+         return true;
+      },
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
