@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
@@ -255,39 +256,85 @@ class _Screen6UploadState extends State<Screen6Upload> {
 
     try {
       final dio = Dio();
-      final formData = FormData.fromMap({
+      dio.options.headers['x-api-key'] = 'my_private_key_50';
+      dio.options.connectTimeout = const Duration(minutes: 5);
+      dio.options.receiveTimeout = const Duration(minutes: 30);
+      dio.options.sendTimeout = const Duration(minutes: 30);
+
+      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
+      if (allFiles.isEmpty) return;
+
+      int totalBytes = allFiles.fold(0, (sum, f) => sum + f.size);
+      int bytesAlreadyUploaded = 0;
+
+      String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+      Map<String, int> chunksMap = {};
+      int chunkSize = 30 * 1024 * 1024; // 30 MB chunks
+
+      for (var platformFile in allFiles) {
+        if (platformFile.path == null) continue;
+        File file = File(platformFile.path!);
+        int fileLength = await file.length();
+        
+        int chunksCount = (fileLength / chunkSize).ceil();
+        if (chunksCount == 0) chunksCount = 1; 
+        chunksMap[platformFile.name] = chunksCount;
+
+        RandomAccessFile raf = await file.open(mode: FileMode.read);
+        
+        for (int i = 0; i < chunksCount; i++) {
+          int bytesToRead = (i == chunksCount - 1) ? fileLength - (i * chunkSize) : chunkSize;
+          List<int> chunkBytes = await raf.read(bytesToRead);
+          
+          var formData = FormData.fromMap({
+            'session_id': sessionId,
+            'filename': platformFile.name,
+            'chunk_index': i,
+            'chunk': MultipartFile.fromBytes(chunkBytes, filename: '${platformFile.name}.part$i'),
+          });
+          
+          await dio.post(
+            'https://health-port.work/upload/chunk',
+            data: formData,
+            onSendProgress: (sent, total) {
+              if (total > 0) {
+                double chunkProgress = sent / total;
+                double overallProgress = (bytesAlreadyUploaded + (bytesToRead * chunkProgress)) / totalBytes;
+                _progressNotifier.value = overallProgress > 1.0 ? 1.0 : overallProgress;
+              }
+            },
+          );
+          bytesAlreadyUploaded += bytesToRead;
+        }
+        await raf.close();
+      }
+
+      var completeFormData = FormData.fromMap({
+        'session_id': sessionId,
         'user_id': _userId,
         'pos': _pos,
         'fit': _fit,
         'training': _training,
         'location': _locationController.text,
         'remarks': _remarksController.text,
+        'total_chunks_map': jsonEncode(chunksMap),
       });
 
-      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
-      for (var file in allFiles) {
-        if (file.path != null) {
-          formData.files.add(MapEntry('files', await MultipartFile.fromFile(file.path!, filename: file.name)));
-        }
-      }
-
       await dio.post(
-        'https://health-port.work/upload',
-        data: formData,
-        options: Options(
-          headers: {
-            'x-api-key': 'my_private_key_50',
-          },
-        ),
-        onSendProgress: (int sent, int total) {
-          if (total != -1) {
-            _progressNotifier.value = sent / total;
-          }
-        },
+        'https://health-port.work/upload/complete',
+        data: completeFormData,
       );
 
       if (!mounted) return;
       Navigator.pop(context); // Close dialog
+      
+      setState(() {
+         _colaFiles.clear();
+         _captureFiles.clear();
+         _logFiles.clear();
+         _locationController.clear();
+         _remarksController.clear();
+      });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드 성공!')));
     } catch (e) {
       if (!mounted) return;
