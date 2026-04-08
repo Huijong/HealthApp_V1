@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,12 +15,18 @@ class Screen6Upload extends StatefulWidget {
 
 class _Screen6UploadState extends State<Screen6Upload> {
   String _userId = 'Unknown';
+  String _watchModel = 'Unknown';
+  String _strap = 'Unknown';
+  String _activityName = 'Unknown';
   String _pos = '왼쪽';
   String _fit = '적당히';
   String _training = '조깅';
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
   final List<String> _trainingOptions = ['조깅', '인터벌', 'LSD', '변속주', '지속주'];
+  Map<String, int> _badgeCounts = {
+    '조깅': 0, '인터벌': 0, 'LSD': 0, '변속주': 0, '지속주': 0,
+  };
 
   List<PlatformFile> _colaFiles = [];
   List<PlatformFile> _captureFiles = [];
@@ -30,13 +37,59 @@ class _Screen6UploadState extends State<Screen6Upload> {
   void initState() {
     super.initState();
     _loadUserId();
+    
+    // 사용자가 옵션과 파일을 선택하는 동안 백그라운드 서비스가 미리 부팅되도록 보장합니다
+    _ensureServiceRunning();
+  }
+
+  Future<void> _ensureServiceRunning() async {
+    final service = FlutterBackgroundService();
+    if (!(await service.isRunning())) {
+      await service.startService();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String) {
+      _activityName = args;
+    }
   }
 
   Future<void> _loadUserId() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userId = prefs.getString('Id') ?? 'Unknown';
+      _watchModel = prefs.getString('selectedWatchModel') ?? 'Unknown';
+      _strap = prefs.getString('selectedStrap') ?? 'Unknown';
     });
+
+    String historyStr = prefs.getString('upload_history') ?? '[]';
+    List<dynamic> historyList = jsonDecode(historyStr);
+    
+    Map<String, int> counts = {
+      '조깅': 0, '인터벌': 0, 'LSD': 0, '변속주': 0, '지속주': 0,
+    };
+
+    for (var item in historyList) {
+      if (item['isSuccess'] == true) {
+        List<dynamic> tags = item['tags'] ?? [];
+        if (tags.isNotEmpty) {
+          String training = tags[0].toString();
+          if (counts.containsKey(training)) {
+            counts[training] = counts[training]! + 1;
+          }
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _badgeCounts = counts;
+      });
+    }
   }
 
   Future<List<PlatformFile>> _pickCustomFiles(String dirPath, String prefixFilter, List<String> extensions, {bool isImageMode = false}) async {
@@ -223,6 +276,43 @@ class _Screen6UploadState extends State<Screen6Upload> {
       return;
     }
 
+    List<String> missingFiles = [];
+    if (_colaFiles.isEmpty) missingFiles.add('Cola');
+    if (_captureFiles.isEmpty) missingFiles.add('Capture');
+    if (_logFiles.isEmpty) missingFiles.add('Log');
+
+    if (missingFiles.isNotEmpty) {
+      String missingStr = missingFiles.join(', ');
+      bool confirm = await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('파일 누락 확인', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Text('$missingStr 파일을 첨부 안하셨습니다.\n그래도 전송하시겠습니까?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('아니오', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('예', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ) ?? false;
+      
+      if (!confirm) {
+        return; // 사용자가 취소
+      }
+    }
+
+    _performUpload();
+  }
+
+  Future<void> _performUpload() async {
     _progressNotifier.value = 0.0;
 
     showDialog(
@@ -269,11 +359,16 @@ class _Screen6UploadState extends State<Screen6Upload> {
       bool isRunning = await service.isRunning();
       if (!isRunning) {
         await service.startService();
+        // 백그라운드 분리 스레드(Isolate)가 완전히 초기화되고 이벤트 리스너를 달 때까지 잠시 대기
+        await Future.delayed(const Duration(seconds: 2));
       }
 
       service.invoke('startUpload', {
         'files': mappedFiles,
         'userId': _userId,
+        'watchModel': _watchModel,
+        'strap': _strap,
+        'activityName': _activityName,
         'pos': _pos,
         'fit': _fit,
         'training': _training,
@@ -300,6 +395,8 @@ class _Screen6UploadState extends State<Screen6Upload> {
                  _remarksController.clear();
               });
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드 성공!')));
+              // 진행률 다이얼로그 닫은 후, 현재 화면(Screen 6)도 닫아서 Screen 5로 복귀!
+              Navigator.pop(context);
            } else {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('업로드 실패: ${event["error"]}')));
            }
@@ -428,9 +525,31 @@ class _Screen6UploadState extends State<Screen6Upload> {
                       }
                     },
                     items: _trainingOptions.map<DropdownMenuItem<String>>((String value) {
+                      int count = _badgeCounts[value] ?? 0;
                       return DropdownMenuItem<String>(
                         value: value,
-                        child: Text(value),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(value),
+                            if (count > 0)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: primaryColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       );
                     }).toList(),
                   ),

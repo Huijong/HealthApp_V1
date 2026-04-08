@@ -1,7 +1,56 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class Screen5ActivityList extends StatelessWidget {
+class Screen5ActivityList extends StatefulWidget {
   const Screen5ActivityList({super.key});
+
+  @override
+  State<Screen5ActivityList> createState() => _Screen5ActivityListState();
+}
+
+class _Screen5ActivityListState extends State<Screen5ActivityList> {
+  Map<String, int> _badgeCounts = {
+    '러닝머신 걷기': 0,
+    '러닝머신 달리기': 0,
+    '야외 걷기': 0,
+    '야외 달리기': 0,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // 백그라운드 서비스에서 저장한 최신 데이터 디스크 갱신
+    String historyStr = prefs.getString('upload_history') ?? '[]';
+    List<dynamic> historyList = jsonDecode(historyStr);
+    
+    Map<String, int> counts = {
+      '러닝머신 걷기': 0,
+      '러닝머신 달리기': 0,
+      '야외 걷기': 0,
+      '야외 달리기': 0,
+    };
+
+    for (var item in historyList) {
+      if (item['isSuccess'] == true) {
+        String activityName = item['activityName']?.toString() ?? 'Unknown';
+        if (counts.containsKey(activityName)) {
+          counts[activityName] = counts[activityName]! + 1;
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _badgeCounts = counts;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,8 +178,8 @@ class Screen5ActivityList extends StatelessWidget {
                 context,
                 icon: Icons.directions_walk,
                 title: '러닝머신 걷기',
-                subtitle: 'Treadmill Walk',
-                badgeCount: '3',
+                subtitle: 'Treadmill Walking',
+                badgeCount: _badgeCounts['러닝머신 걷기'] ?? 0,
                 theme: theme,
               ),
               const SizedBox(height: 16),
@@ -138,8 +187,8 @@ class Screen5ActivityList extends StatelessWidget {
                 context,
                 icon: Icons.directions_run,
                 title: '러닝머신 달리기',
-                subtitle: 'Treadmill Run',
-                badgeCount: '3',
+                subtitle: 'Treadmill Running',
+                badgeCount: _badgeCounts['러닝머신 달리기'] ?? 0,
                 theme: theme,
               ),
               const SizedBox(height: 16),
@@ -147,17 +196,17 @@ class Screen5ActivityList extends StatelessWidget {
                 context,
                 icon: Icons.nature_people,
                 title: '야외 걷기',
-                subtitle: 'Outdoor Walk',
-                badgeCount: '3',
+                subtitle: 'Outdoor Walking',
+                badgeCount: _badgeCounts['야외 걷기'] ?? 0,
                 theme: theme,
               ),
               const SizedBox(height: 16),
               _buildActivityItem(
                 context,
-                icon: Icons.terrain,
+                icon: Icons.directions_run,
                 title: '야외 달리기',
-                subtitle: 'Outdoor Run',
-                badgeCount: '3',
+                subtitle: 'Outdoor Running',
+                badgeCount: _badgeCounts['야외 달리기'] ?? 0,
                 theme: theme,
               ),
             ],
@@ -172,7 +221,7 @@ class Screen5ActivityList extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    required String badgeCount,
+    required int badgeCount,
     required ThemeData theme,
   }) {
     final isDark = theme.brightness == Brightness.dark;
@@ -237,27 +286,39 @@ class Screen5ActivityList extends StatelessWidget {
           ),
           Row(
             children: [
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/screen8'), // To Exercise History
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[800] : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    badgeCount,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.grey[300] : Colors.grey[600],
+              if (badgeCount > 0)
+                GestureDetector(
+                  onTap: () => Navigator.pushNamed(context, '/screen8'), // To Exercise History
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.grey[800] : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      badgeCount.toString(),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.grey[300] : Colors.grey[600],
+                      ),
                     ),
                   ),
                 ),
+              if (badgeCount > 0)
+                const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.grey,
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/screen6'),
+                onPressed: () async {
+                  await Navigator.pushNamed(context, '/screen6', arguments: title);
+                  if (mounted) {
+                    _loadHistory();
+                  }
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: primaryColor,
                   foregroundColor: Colors.white,

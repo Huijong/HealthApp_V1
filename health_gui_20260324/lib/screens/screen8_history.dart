@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Screen8History extends StatefulWidget {
   const Screen8History({super.key});
@@ -8,56 +10,36 @@ class Screen8History extends StatefulWidget {
 }
 
 class _Screen8HistoryState extends State<Screen8History> {
-  final List<Map<String, dynamic>> _historyData = [
-    {
-      'id': '1',
-      'type': 'Success',
-      'date': '2024.03.15 14:30',
-      'tags': ['인터벌', '왼쪽', '충분히'],
-      'durationStr': 'Duration: 45m 12s • 3.2 km',
-      'fileSize': '2.4 MB',
-      'isSuccess': true,
-    },
-    {
-      'id': '2',
-      'type': 'Success',
-      'date': '2024.03.12 09:15',
-      'tags': ['조깅', '오른쪽', '적당히'],
-      'durationStr': 'Duration: 30m 00s • 2.1 km',
-      'fileSize': '1.8 MB',
-      'isSuccess': true,
-    },
-    {
-      'id': '3',
-      'type': 'Submitted',
-      'date': '2024.03.10 18:45',
-      'tags': ['지속주', '왼쪽', '느슨하게'],
-      'durationStr': 'Pending processing...',
-      'fileSize': '2.1 MB',
-      'isSuccess': false,
-      'opacity': 0.6,
-    },
-    {
-      'id': '4',
-      'type': 'Success',
-      'date': '2024.03.08 07:00',
-      'tags': ['인터벌', '오른쪽', '충분히'],
-      'durationStr': 'Duration: 60m 05s • 4.5 km',
-      'fileSize': '3.4 MB',
-      'isSuccess': true,
-    },
-    {
-      'id': '5',
-      'type': 'Success',
-      'date': '2024.03.05 12:20',
-      'tags': ['조깅', '왼쪽', '적당히'],
-      'durationStr': 'Duration: 20m 15s • 1.5 km',
-      'fileSize': '1.2 MB',
-      'isSuccess': true,
-    },
-  ];
+  List<Map<String, dynamic>> _historyData = [];
 
-  void _deleteHistory(String id) {
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    String historyStr = prefs.getString('upload_history') ?? '[]';
+    List<dynamic> parsedList = jsonDecode(historyStr);
+    
+    // 최신순 정렬
+    List<Map<String, dynamic>> history = parsedList.reversed.map((e) => Map<String, dynamic>.from(e)).toList();
+
+    if (mounted) {
+       setState(() {
+         _historyData = history;
+       });
+    }
+  }
+  Future<void> _deleteHistory(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    String historyStr = prefs.getString('upload_history') ?? '[]';
+    List<dynamic> parsedList = jsonDecode(historyStr);
+    
+    parsedList.removeWhere((item) => item['id'] == id);
+    await prefs.setString('upload_history', jsonEncode(parsedList));
+
     setState(() {
       _historyData.removeWhere((item) => item['id'] == id);
     });
