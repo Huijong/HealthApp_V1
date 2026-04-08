@@ -11,17 +11,32 @@ class Screen8History extends StatefulWidget {
 
 class _Screen8HistoryState extends State<Screen8History> {
   List<Map<String, dynamic>> _historyData = [];
+  String? _filterActivityName;
+  bool _isInit = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadHistory();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInit) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is String) {
+        _filterActivityName = args;
+      }
+      _loadHistory();
+      _isInit = true;
+    }
   }
 
   Future<void> _loadHistory() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // 강제로 가장 최신 캐시를 엎어씀
     String historyStr = prefs.getString('upload_history') ?? '[]';
     List<dynamic> parsedList = jsonDecode(historyStr);
+    
+    // 타겟 필터에 해당하는 이력만 추출
+    if (_filterActivityName != null) {
+      parsedList = parsedList.where((item) => item['activityName'] == _filterActivityName).toList();
+    }
     
     // 최신순 정렬
     List<Map<String, dynamic>> history = parsedList.reversed.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -57,7 +72,7 @@ class _Screen8HistoryState extends State<Screen8History> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('운동 히스토리'),
+        title: Text(_filterActivityName != null ? '$_filterActivityName 히스토리' : '전체 운동 히스토리'),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),

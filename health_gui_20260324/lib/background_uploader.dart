@@ -21,7 +21,7 @@ void onStart(ServiceInstance service) async {
 
   await flutterLocalNotificationsPlugin.initialize(
     settings: const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('@mipmap/launcher_icon'),
     ),
   );
 
@@ -36,32 +36,37 @@ void onStart(ServiceInstance service) async {
   service.on('startUpload').listen((event) async {
     if (event == null) return;
 
-    List<dynamic> rawFiles = event['files'];
-    List<Map<String, dynamic>> files = rawFiles.cast<Map<String, dynamic>>();
-
-    String userId = event['userId'];
-    String pos = event['pos'];
-    String fit = event['fit'];
-    String training = event['training'];
-    String watchModel = event['watchModel'] ?? 'Unknown';
-    String strap = event['strap'] ?? 'Unknown';
-    String activityName = event['activityName'] ?? 'Unknown';
-    String location = event['location'];
-    String remarks = event['remarks'];
-
-    if (service is AndroidServiceInstance) {
-      service.setAsForegroundService();
-      flutterLocalNotificationsPlugin.show(
-        id: 888,
-        title: '업로드 진행 중',
-        body: '파일 업로드를 시작합니다 (0%)',
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails('upload_channel', 'Background Uploads', ongoing: true, icon: '@mipmap/ic_launcher'),
-        ),
-      );
-    }
-
     try {
+      List<dynamic> rawFiles = event['files'];
+      
+      // 강력한 타입 캐스팅 우회 (Type Cast Error 방지)
+      List<Map<String, dynamic>> files = [];
+      for (var element in rawFiles) {
+         files.add(Map<String, dynamic>.from(element as Map));
+      }
+
+      String? userId = event['userId'];
+      String? pos = event['pos'];
+      String? fit = event['fit'];
+      String? training = event['training'];
+      String? watchModel = event['watchModel'];
+      String? strap = event['strap'];
+      String? activityName = event['activityName'];
+      String? location = event['location'];
+      String? remarks = event['remarks'];
+
+      if (service is AndroidServiceInstance) {
+        service.setAsForegroundService();
+        await flutterLocalNotificationsPlugin.show(
+          id: 888,
+          title: '업로드 진행 중',
+          body: '파일 업로드를 시작합니다 (0%)',
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails('upload_channel', 'Background Uploads', ongoing: true, icon: '@mipmap/launcher_icon'),
+          ),
+        );
+      }
+
       final dio = Dio();
       dio.options.headers['x-api-key'] = 'my_private_key_50';
       dio.options.connectTimeout = const Duration(minutes: 5);
@@ -126,8 +131,8 @@ void onStart(ServiceInstance service) async {
       var completeFormData = FormData.fromMap({
         'session_id': sessionId.toString(),
         'user_id': (userId ?? 'Unknown').toString(),
-        'watch_model': watchModel.toString(),
-        'strap': strap.toString(),
+        'watch_model': (watchModel ?? 'Unknown').toString(),
+        'strap': (strap ?? 'Unknown').toString(),
         'pos': (pos == null || pos.isEmpty) ? ' ' : pos.toString(),
         'fit': (fit == null || fit.isEmpty) ? ' ' : fit.toString(),
         'training': (training == null || training.isEmpty) ? ' ' : training.toString(),
@@ -153,10 +158,10 @@ void onStart(ServiceInstance service) async {
 
         Map<String, dynamic> newHistory = {
           'id': sessionId,
-          'activityName': activityName,
+          'activityName': activityName ?? 'Unknown',
           'type': 'Success',
           'date': dateStr,
-          'tags': [training, watchModel, strap, pos, fit],
+          'tags': [training ?? ' ', watchModel ?? ' ', strap ?? ' ', pos ?? ' ', fit ?? ' '],
           'durationStr': 'Uploaded successfully',
           'fileSize': sizeStr,
           'isSuccess': true,
@@ -170,23 +175,28 @@ void onStart(ServiceInstance service) async {
 
       service.invoke('uploadComplete', {'success': true});
       if (service is AndroidServiceInstance) {
-         flutterLocalNotificationsPlugin.show(
+         await flutterLocalNotificationsPlugin.show(
            id: 888, title: '업로드 성공!', body: '백그라운드 파일 전송이 성공적으로 완료되었습니다.',
-           notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('upload_channel', 'Background Uploads', ongoing: false, icon: '@mipmap/ic_launcher')),
+           notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('upload_channel', 'Background Uploads', ongoing: false, icon: '@mipmap/launcher_icon')),
          );
          service.setAsBackgroundService();
       }
       
-    } catch (e) {
-      if (e is DioException && e.response != null) {
-        service.invoke('uploadComplete', {'success': false, 'error': 'Dio응답 오류 ${e.response?.statusCode}: ${e.response?.data}'});
+    } catch (e, stack) {
+      String errMsg = e.toString();
+      if (e is DioException) {
+         errMsg = "Dio응답 오류 ${e.response?.statusCode}: ${e.response?.data}";
       } else {
-        service.invoke('uploadComplete', {'success': false, 'error': e.toString()});
+         errMsg = "백그라운드 에러: $e\n$stack";
       }
+      service.invoke('uploadComplete', {
+        'success': false,
+        'error': errMsg, // Changed 'message' to 'error' to match flutter screen listener!
+      });
       if (service is AndroidServiceInstance) {
-         flutterLocalNotificationsPlugin.show(
+         await flutterLocalNotificationsPlugin.show(
            id: 888, title: '업로드 실패', body: '오류 발생, 앱에서 확인해주세요.',
-           notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('upload_channel', 'Background Uploads', ongoing: false, icon: '@mipmap/ic_launcher')),
+           notificationDetails: const NotificationDetails(android: AndroidNotificationDetails('upload_channel', 'Background Uploads', ongoing: false, icon: '@mipmap/launcher_icon')),
          );
          service.setAsBackgroundService();
       }

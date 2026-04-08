@@ -288,9 +288,9 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
             children: [
               if (badgeCount > 0)
                 GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/screen8'), // To Exercise History
+                  onTap: () => Navigator.pushNamed(context, '/screen8', arguments: title),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: isDark ? Colors.grey[800] : Colors.grey[100],
                       borderRadius: BorderRadius.circular(16),
@@ -306,12 +306,7 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
                   ),
                 ),
               if (badgeCount > 0)
-                const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right,
-                color: Colors.grey,
-              ),
-              const SizedBox(width: 12),
+                const SizedBox(width: 10),
               ElevatedButton(
                 onPressed: () async {
                   await Navigator.pushNamed(context, '/screen6', arguments: title);
@@ -325,7 +320,7 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   elevation: 0,
                 ),
                 child: const Text('제출', style: TextStyle(fontWeight: FontWeight.bold)),
