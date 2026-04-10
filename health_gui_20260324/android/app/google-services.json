@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1092397607831",
+    "project_id": "healthport-cd2db",
+    "storage_bucket": "healthport-cd2db.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1092397607831:android:e3f21c2051e9fa3290f2d2",
+        "android_client_info": {
+          "package_name": "com.example.health_gui_20260324"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE1SPonCnQsqOakPxsntPv6hvI7FxcXCo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
