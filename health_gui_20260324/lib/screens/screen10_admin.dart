@@ -11,10 +11,13 @@ class Screen10Admin extends StatefulWidget {
 }
 
 class _Screen10AdminState extends State<Screen10Admin> {
-  bool _immediateSend = true;
   bool _isPasswordVisible = false;
   int _deviceCount = 0;
   bool _isLoadingCount = true;
+
+  List<dynamic> _notices = [];
+  bool _isLoadingNotices = true;
+  String _lastSavedTime = '';
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _bodyController = TextEditingController();
@@ -25,6 +28,55 @@ class _Screen10AdminState extends State<Screen10Admin> {
     super.initState();
     _fetchDeviceCount();
     _loadSavedPassword();
+    _loadDraft();
+    _fetchNotices();
+  }
+
+  Future<void> _loadDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _titleController.text = prefs.getString('draft_title') ?? '';
+        _bodyController.text = prefs.getString('draft_body') ?? '';
+        _lastSavedTime = prefs.getString('draft_time') ?? '';
+      });
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('draft_title', _titleController.text);
+    await prefs.setString('draft_body', _bodyController.text);
+    
+    final now = DateTime.now();
+    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    await prefs.setString('draft_time', timeStr);
+    
+    if (mounted) {
+      setState(() => _lastSavedTime = timeStr);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('기기에 임시 저장되었습니다.')));
+    }
+  }
+
+  Future<void> _fetchNotices() async {
+    try {
+      final res = await http.get(Uri.parse('https://health-port.work/notices'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['status'] == 'success') {
+          if (mounted) {
+            setState(() {
+              _notices = data['data'];
+              _isLoadingNotices = false;
+            });
+          }
+          return;
+        }
+      }
+    } catch(e) {
+      debugPrint("공지 목록 불러오기 실패: $e");
+    }
+    if (mounted) setState(() => _isLoadingNotices = false);
   }
 
   Future<void> _loadSavedPassword() async {
@@ -84,6 +136,16 @@ class _Screen10AdminState extends State<Screen10Admin> {
         if (!mounted) return;
         _titleController.clear();
         _bodyController.clear();
+        
+        final clearPrefs = await SharedPreferences.getInstance();
+        await clearPrefs.remove('draft_title');
+        await clearPrefs.remove('draft_body');
+        await clearPrefs.remove('draft_time');
+        setState(() => _lastSavedTime = '');
+
+        // 방금 작성한 공지가 포함되도록 새로고침
+        _fetchNotices();
+
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -167,7 +229,7 @@ class _Screen10AdminState extends State<Screen10Admin> {
                     TextField(
                       controller: _titleController,
                       decoration: InputDecoration(
-                        hintText: '예: 시스템 점검 안내',
+                        hintText: '예: 헬스 버전 업데이트',
                         filled: true,
                         fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                         border: OutlineInputBorder(
@@ -190,7 +252,7 @@ class _Screen10AdminState extends State<Screen10Admin> {
                       controller: _bodyController,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText: '공지할 내용을 여기에 입력하세요...',
+                        hintText: '공지할 내용을 여기에 입력하세요.',
                         filled: true,
                         fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                         border: OutlineInputBorder(
@@ -204,7 +266,7 @@ class _Screen10AdminState extends State<Screen10Admin> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         ElevatedButton(
-                          onPressed: () {},
+                          onPressed: _saveDraft,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor.withOpacity(0.1),
                             foregroundColor: primaryColor,
@@ -216,14 +278,15 @@ class _Screen10AdminState extends State<Screen10Admin> {
                           ),
                           child: const Text('임시 저장', style: TextStyle(fontWeight: FontWeight.bold)),
                         ),
-                        Text(
-                          '마지막 저장: 2분 전',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isDark ? Colors.grey[500] : Colors.grey[400],
-                            fontWeight: FontWeight.w500,
+                        if (_lastSavedTime.isNotEmpty)
+                          Text(
+                            '마지막 저장: $_lastSavedTime',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.grey[500] : Colors.grey[400],
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ],
@@ -256,37 +319,6 @@ class _Screen10AdminState extends State<Screen10Admin> {
                             fontWeight: FontWeight.bold,
                             color: isDark ? Colors.white : Colors.grey[900],
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '즉시 전송',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.grey[900],
-                              ),
-                            ),
-                            Text(
-                              '대기열 없이 즉시 발송합니다',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isDark ? Colors.grey[400] : Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ),
-                        Switch(
-                          value: _immediateSend,
-                          onChanged: (val) => setState(() => _immediateSend = val),
-                          activeColor: primaryColor,
                         ),
                       ],
                     ),
@@ -477,25 +509,25 @@ class _Screen10AdminState extends State<Screen10Admin> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    _buildHistoryItem(
-                      tag: 'Sent',
-                      tagColor: primaryColor,
-                      title: '앱 버전 2.5.0 업데이트 안내',
-                      time: '2024년 01월 15일 • 10:00',
-                      status: '성공률 99.8%',
-                      theme: theme,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(height: 12),
-                    _buildHistoryItem(
-                      tag: 'Scheduled',
-                      tagColor: Colors.grey,
-                      title: '설날 연휴 고객센터 휴무 공지',
-                      time: '2024년 02월 08일 • 09:00 (예정)',
-                      status: '대기 중',
-                      theme: theme,
-                      isDark: isDark,
-                    ),
+                    if (_isLoadingNotices)
+                      const Center(child: CircularProgressIndicator())
+                    else if (_notices.isEmpty)
+                      const Text('공지 기록이 없습니다.')
+                    else
+                      ..._notices.take(5).map((notice) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: _buildHistoryItem(
+                            tag: 'Sent',
+                            tagColor: primaryColor,
+                            title: notice['title'] ?? '제목 없음',
+                            time: notice['created_at'] ?? '',
+                            status: '성공률 100%',
+                            theme: theme,
+                            isDark: isDark,
+                          ),
+                        );
+                      }).toList(),
                   ],
                 ),
               ),

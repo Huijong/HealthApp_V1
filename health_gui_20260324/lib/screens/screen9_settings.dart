@@ -133,7 +133,7 @@ class _Screen9SettingsState extends State<Screen9Settings> {
               const SizedBox(height: 16),
 
               GestureDetector(
-                onTap: () => Navigator.pushNamed(context, '/screen10'),
+                onTap: () => _showAdminLoginDialog(context),
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -291,6 +291,62 @@ class _Screen9SettingsState extends State<Screen9Settings> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _showAdminLoginDialog(BuildContext context) async {
+    final TextEditingController pwController = TextEditingController();
+    bool isObscure = true;
+    
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('관리자 인증', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              content: TextField(
+                controller: pwController,
+                obscureText: isObscure,
+                decoration: InputDecoration(
+                  hintText: '비밀번호를 입력하세요',
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(isObscure ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () {
+                      setDialogState(() {
+                        isObscure = !isObscure;
+                      });
+                    },
+                  )
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('취소', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (pwController.text.trim() == 'healthport') {
+                      Navigator.pop(ctx);
+                      Navigator.pushNamed(context, '/screen10');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('비밀번호가 틀렸습니다.')));
+                    }
+                  },
+                  child: const Text('확인'),
+                ),
+              ],
+            );
+          }
+        );
+      }
     );
   }
 
