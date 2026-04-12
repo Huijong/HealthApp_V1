@@ -5,6 +5,9 @@ import os
 import json
 from datetime import datetime, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
+import firebase_admin
+from firebase_admin import credentials, messaging
+from pydantic import BaseModel
 
 app = FastAPI()
 # ---------------- [보안 설정 추가] ---------------- #
@@ -41,9 +44,90 @@ if not os.path.exists(TEMP_DIR):
 client = AsyncIOMotorClient("mongodb://localhost:27017/")
 db = client["health_db"]
 collection = db["upload_history"]
+notices_collection = db["notices"]
 
 # 3. 보안 키
 SECRET_API_KEY = "my_private_key_50"
+
+# 4. Firebase Admin 설정
+FIREBASE_KEY_PATH = r"D:\HealthApp_Server\service-account.json"
+try:
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(FIREBASE_KEY_PATH)
+        firebase_admin.initialize_app(cred)
+        print("Firebase Admin이 성공적으로 초기화되었습니다.")
+except Exception as e:
+    print(f"Firebase 초기화 에러: {e}")
+
+class NoticeRequest(BaseModel):
+    title: str
+    body: str
+
+@app.post("/admin/send-notice")
+async def send_notice(request: NoticeRequest, x_api_key: str = Header(None)):
+    if x_api_key != SECRET_API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API Key")
+    
+    try:
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=request.title,
+                body=request.body,
+            ),
+            data={
+                "click_action": "FLUTTER_NOTIFICATION_CLICK",
+                "screen": "notice"
+            },
+            topic="all_users"
+        )
+        response = messaging.send(message)
+        
+        # 공지사항 DB 저장
+        doc = {
+            "title": request.title,
+            "body": request.body,
+            "created_at": datetime.utcnow() # UTC 기준 저장
+        }
+        await notices_collection.insert_one(doc)
+
+        return {"status": "success", "message_id": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Firebase 전송 실패: {str(e)}")
+
+@app.get("/admin/device-count")
+async def get_device_count():
+    try:
+        # DB에 저장된 고유한 user_id 개수를 반환하여 가입 기기 수로 간주합니다.
+        unique_users = await collection.distinct("user_id")
+        return {"device_count": len(unique_users)}
+    except Exception as e:
+        return {"device_count": 0}
+
+@app.get("/notices")
+async def get_all_notices():
+    try:
+        # 최근 50개의 공지사항 불러오기
+        cursor = notices_collection.find({}).sort("created_at", -1).limit(50)
+        notices_list = await cursor.to_list(length=50)
+        results = []
+        for doc in notices_list:
+            created_at = doc.get("created_at")
+            if isinstance(created_at, datetime):
+                # 표시를 위해 KST(+9시간) 변환
+                kst_time = created_at + timedelta(hours=9)
+                time_str = kst_time.strftime("%y.%m.%d %H:%M")
+            else:
+                time_str = ""
+
+            results.append({
+                "id": str(doc["_id"]),
+                "title": doc.get("title", ""),
+                "body": doc.get("body", ""),
+                "created_at": time_str
+            })
+        return {"status": "success", "data": results}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 
 @app.post("/upload/chunk")

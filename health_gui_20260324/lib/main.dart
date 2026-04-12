@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'background_uploader.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,14 +17,42 @@ import 'screens/screen8_history.dart';
 import 'screens/screen9_settings.dart';
 import 'screens/screen10_admin.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Firebase 초기화
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // 권한 요청 및 all_users 토픽 구독
+  await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  await FirebaseMessaging.instance.subscribeToTopic('all_users');
+
   final prefs = await SharedPreferences.getInstance();
   final isSetupComplete = prefs.getBool('isSetupComplete') ?? false;
 
+  String startRoute = isSetupComplete ? '/screen5' : '/screen1';
+  
+  // 강제 종료 상태에서 푸시를 터치하여 앱이 시작된 경우
+  final initialMsg = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMsg != null && initialMsg.data['screen'] == 'notice') {
+    startRoute = '/screen7';
+  }
+
   await initializeService();
 
-  runApp(MyApp(isSetupComplete: isSetupComplete));
+  runApp(MyApp(startRoute: startRoute));
 }
 
 Future<void> initializeService() async {
@@ -46,13 +76,22 @@ Future<void> initializeService() async {
 }
 
 class MyApp extends StatelessWidget {
-  final bool isSetupComplete;
+  final String startRoute;
 
-  const MyApp({super.key, required this.isSetupComplete});
+  const MyApp({super.key, required this.startRoute});
 
   @override
   Widget build(BuildContext context) {
+
+    // 앱이 백그라운드 상태일 때 푸시를 눌러 전환된 경우
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      if (message.data['screen'] == 'notice') {
+        navigatorKey.currentState?.pushNamed('/screen7');
+      }
+    });
+
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Health GUI',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -67,7 +106,7 @@ class MyApp extends StatelessWidget {
         Locale('en', 'US'),
       ],
       locale: const Locale('ko', 'KR'),
-      initialRoute: isSetupComplete ? '/screen5' : '/screen1',
+      initialRoute: startRoute,
       routes: {
         '/screen1': (context) => const Screen1IdInput(),
         '/screen2': (context) => const Screen2BodyInfo(),

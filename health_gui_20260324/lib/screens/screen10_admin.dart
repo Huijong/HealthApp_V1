@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Screen10Admin extends StatefulWidget {
   const Screen10Admin({super.key});
@@ -9,6 +12,100 @@ class Screen10Admin extends StatefulWidget {
 
 class _Screen10AdminState extends State<Screen10Admin> {
   bool _immediateSend = true;
+  bool _isPasswordVisible = false;
+  int _deviceCount = 0;
+  bool _isLoadingCount = true;
+
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _bodyController = TextEditingController();
+  final TextEditingController _pwController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDeviceCount();
+    _loadSavedPassword();
+  }
+
+  Future<void> _loadSavedPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPwd = prefs.getString('admin_pwd');
+    if (savedPwd != null && savedPwd.isNotEmpty && mounted) {
+      setState(() {
+        _pwController.text = savedPwd;
+      });
+    }
+  }
+
+  Future<void> _fetchDeviceCount() async {
+    try {
+      final res = await http.get(Uri.parse('https://health-port.work/admin/device-count'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _deviceCount = data['device_count'] ?? 0;
+            _isLoadingCount = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingCount = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingCount = false);
+    }
+  }
+
+  Future<void> _sendPushNotice() async {
+    final title = _titleController.text.trim();
+    final body = _bodyController.text.trim();
+    final pwd = _pwController.text.trim();
+
+    if (title.isEmpty || body.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('제목과 내용을 입력해주세요.')));
+      return;
+    }
+
+    try {
+      // Cloudflare Tunnels public domain
+      final res = await http.post(
+        Uri.parse('https://health-port.work/admin/send-notice'),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': pwd,
+        },
+        body: jsonEncode({'title': title, 'body': body}),
+      );
+      if (res.statusCode == 200) {
+        // 성공 시 텍스트 지우기 및 비밀번호 저장
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('admin_pwd', pwd);
+
+        if (!mounted) return;
+        _titleController.clear();
+        _bodyController.clear();
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('💡 전송 성공'),
+            content: const Text('모든 기기로 푸시 알림이 정상적으로 전송되었습니다.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('확인'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('전송 실패: ${res.statusCode}')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('네트워크 오류: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +165,7 @@ class _Screen10AdminState extends State<Screen10Admin> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
+                      controller: _titleController,
                       decoration: InputDecoration(
                         hintText: '예: 시스템 점검 안내',
                         filled: true,
@@ -89,6 +187,7 @@ class _Screen10AdminState extends State<Screen10Admin> {
                     ),
                     const SizedBox(height: 8),
                     TextField(
+                      controller: _bodyController,
                       maxLines: 4,
                       decoration: InputDecoration(
                         hintText: '공지할 내용을 여기에 입력하세요...',
@@ -224,7 +323,7 @@ class _Screen10AdminState extends State<Screen10Admin> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '24,812개 기기',
+                            _isLoadingCount ? '계산 중...' : '$_deviceCount개 기기',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -236,11 +335,45 @@ class _Screen10AdminState extends State<Screen10Admin> {
                       ),
                     ),
                     const SizedBox(height: 24),
+                    Text(
+                      '관리자 비밀번호 (API Key)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.grey[400] : Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _pwController,
+                      obscureText: !_isPasswordVisible,
+                      decoration: InputDecoration(
+                        hintText: '비밀번호를 입력하세요',
+                        filled: true,
+                        fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                            color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: _sendPushNotice,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryColor,
                           foregroundColor: Colors.white,
