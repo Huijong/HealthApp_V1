@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class Screen5ActivityList extends StatefulWidget {
   const Screen5ActivityList({super.key});
@@ -28,10 +29,21 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
 
   Future<void> _checkNotice() async {
     final prefs = await SharedPreferences.getInstance();
+    final hasNewNotice = prefs.getBool('has_new_notice') ?? false;
     if (mounted) {
       setState(() {
-        _hasNewNotice = prefs.getBool('has_new_notice') ?? false;
+        _hasNewNotice = hasNewNotice;
       });
+    }
+    
+    // 읽을 공지가 없다면(또는 이미 지워졌다면) 강제로 안드로이드 배지(시스템 노티)도 청소합니다.
+    if (!hasNewNotice) {
+      try {
+        final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+        await flutterLocalNotificationsPlugin.cancelAll();
+      } catch (e) {
+        debugPrint('Error clearing notifications on load: $e');
+      }
     }
   }
 
@@ -91,99 +103,96 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Notice Card
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(isDark ? 0.3 : 0.1),
-                            borderRadius: BorderRadius.circular(16),
+              GestureDetector(
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('has_new_notice', false);
+                  if (mounted) setState(() => _hasNewNotice = false);
+                  try {
+                    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+                    await flutterLocalNotificationsPlugin.cancelAll();
+                  } catch(e) {
+                    debugPrint('Error clearing notifications: $e');
+                  }
+                  if (mounted) Navigator.pushNamed(context, '/screen7');
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(isDark ? 0.3 : 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(Icons.campaign, color: primaryColor),
                           ),
-                          child: Icon(Icons.campaign, color: primaryColor),
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  '공지 사항',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: isDark ? Colors.white : Colors.grey[900],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (_hasNewNotice)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor,
-                                      borderRadius: BorderRadius.circular(6),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '공지 사항',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: isDark ? Colors.white : Colors.grey[900],
                                     ),
-                                    child: const Text(
-                                      'NEW',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.0,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (_hasNewNotice)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: primaryColor,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'NEW',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'NOTICE & UPDATES',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
-                                color: isDark ? Colors.grey[500] : Colors.grey[400],
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.setBool('has_new_notice', false);
-                        if (mounted) setState(() => _hasNewNotice = false);
-                        if (mounted) Navigator.pushNamed(context, '/screen7');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        elevation: 0,
+                              const SizedBox(height: 4),
+                              Text(
+                                'NOTICE & UPDATES',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1.2,
+                                  color: isDark ? Colors.grey[500] : Colors.grey[400],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      child: const Text('보기', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ],
+                      Icon(Icons.chevron_right, color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

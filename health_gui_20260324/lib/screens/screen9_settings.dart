@@ -104,7 +104,6 @@ class _Screen9SettingsState extends State<Screen9Settings> {
                 theme: theme,
                 isDark: isDark,
                 primaryColor: primaryColor,
-                statusTag: 'Connected',
               ),
               const SizedBox(height: 16),
               _buildSettingMenuCard(

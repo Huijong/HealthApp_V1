@@ -12,10 +12,22 @@ class Screen1IdInput extends StatefulWidget {
 
 class _Screen1IdInputState extends State<Screen1IdInput> {
   final TextEditingController _idController = TextEditingController();
+  final FocusNode _idFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) {
+        _idFocusNode.requestFocus();
+      }
+    });
+  }
 
   @override
   void dispose() {
     _idController.dispose();
+    _idFocusNode.dispose();
     super.dispose();
   }
 
@@ -39,14 +51,7 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '서비스 이용을 위해 본인의 ID를 입력해 주세요.',
-                style: TextStyle(
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  fontSize: 16,
-                ),
-              ),
-              const SizedBox(height: 24),
+
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(32.0),
@@ -112,6 +117,7 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
                           ),
                         ),
                         TextField(
+                          focusNode: _idFocusNode,
                           autofocus: true,
                           controller: _idController,
                           decoration: InputDecoration(
