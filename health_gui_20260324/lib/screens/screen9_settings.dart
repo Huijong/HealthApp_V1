@@ -307,6 +307,7 @@ class _Screen9SettingsState extends State<Screen9Settings> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: const Text('관리자 인증', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               content: TextField(
+                autofocus: true,
                 controller: pwController,
                 obscureText: isObscure,
                 decoration: InputDecoration(

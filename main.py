@@ -103,6 +103,14 @@ async def get_device_count():
     except Exception as e:
         return {"device_count": 0}
 
+@app.get("/check-user/{user_id}")
+async def check_user(user_id: str):
+    try:
+        count = await collection.count_documents({"user_id": user_id})
+        return {"exists": count > 0}
+    except Exception as e:
+        return {"exists": False, "detail": str(e)}
+
 @app.get("/notices")
 async def get_all_notices():
     try:
@@ -350,7 +358,7 @@ async def get_history(key: str = None):
                 </style>
             </head>
             <body>
-                <h1>📊 스마트폰 앱 시스템 수신 히스토리</h1>
+                <h1>📊 운동 기록</h1>
 
                 <!-- 건수 요약 표시 -->
                 <div class="summary-box">

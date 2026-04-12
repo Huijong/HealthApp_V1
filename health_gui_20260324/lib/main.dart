@@ -22,6 +22,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool('has_new_notice', true);
   debugPrint("Handling a background message: ${message.messageId}");
 }
 void main() async {
@@ -82,6 +84,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    // 앱이 포그라운드 상태일 때 푸시가 도착한 경우
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('has_new_notice', true);
+    });
 
     // 앱이 백그라운드 상태일 때 푸시를 눌러 전환된 경우
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

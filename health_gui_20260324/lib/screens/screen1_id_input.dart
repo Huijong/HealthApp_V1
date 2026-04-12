@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Screen1IdInput extends StatefulWidget {
   const Screen1IdInput({super.key});
@@ -110,6 +112,7 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
                           ),
                         ),
                         TextField(
+                          autofocus: true,
                           controller: _idController,
                           decoration: InputDecoration(
                             hintText: '아이디를 입력하세요',
@@ -130,7 +133,7 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                '최초 가입 시 설정한 아이디를 입력해 주세요.',
+                                '해당 앱에서 사용할 아이디를 입력해 주세요.',
                                 style: TextStyle(
                                   color: isDark ? Colors.grey[400] : Colors.grey[600],
                                   fontSize: 14,
@@ -144,27 +147,6 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              // Decorative element
-              Container(
-                width: double.infinity,
-                height: 128,
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.grey[800]!.withOpacity(0.5) : Colors.white.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Center(
-                  child: Text(
-                    'SECURITY VERIFIED',
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
               const Spacer(),
               SizedBox(
                 width: double.infinity,
@@ -176,9 +158,53 @@ class _Screen1IdInputState extends State<Screen1IdInput> {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('아이디를 입력해 주세요.')));
                       return;
                     }
-                    final prefs = await SharedPreferences.getInstance();
-                    await prefs.setString('Id', userId);
-                    if (context.mounted) Navigator.pushNamed(context, '/screen2');
+                    bool exists = false;
+                    try {
+                      final apiKey = 'my_private_key_50';
+                      final res = await http.get(Uri.parse('https://health-port.work/check-user/$userId'));
+                      if (res.statusCode == 200) {
+                        final data = jsonDecode(res.body);
+                        exists = data['exists'] ?? false;
+                      }
+                    } catch(e) {
+                      debugPrint('Error checking user: $e');
+                    }
+
+                    if (!context.mounted) return;
+
+                    if (exists) {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          title: const Text('💡 기존 아이디 발견', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          content: Text('\'$userId\'(으)로 등록된 기록이 이미 서버에 존재합니다.\n그래도 이 아이디를 그대로 사용하시겠습니까?', style: const TextStyle(height: 1.5)),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('취소', style: TextStyle(color: Colors.grey)),
+                            ),
+                            ElevatedButton(
+                              onPressed: () async {
+                                Navigator.pop(ctx);
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setString('Id', userId);
+                                await prefs.setBool('isSetupComplete', true);
+                                if (context.mounted) Navigator.pushReplacementNamed(context, '/screen5');
+                              },
+                              style: ElevatedButton.styleFrom(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('진행하기'),
+                            ),
+                          ],
+                        )
+                      );
+                    } else {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setString('Id', userId);
+                      if (context.mounted) Navigator.pushNamed(context, '/screen2');
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,

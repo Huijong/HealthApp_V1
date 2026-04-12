@@ -17,10 +17,22 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
     '야외 달리기': 0,
   };
 
+  bool _hasNewNotice = false;
+
   @override
   void initState() {
     super.initState();
     _loadHistory();
+    _checkNotice();
+  }
+
+  Future<void> _checkNotice() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _hasNewNotice = prefs.getBool('has_new_notice') ?? false;
+      });
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -120,14 +132,23 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: primaryColor,
+                                if (_hasNewNotice)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Text(
+                                      'NEW',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                             const SizedBox(height: 4),
@@ -145,7 +166,12 @@ class _Screen5ActivityListState extends State<Screen5ActivityList> {
                       ],
                     ),
                     ElevatedButton(
-                      onPressed: () => Navigator.pushNamed(context, '/screen7'),
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setBool('has_new_notice', false);
+                        if (mounted) setState(() => _hasNewNotice = false);
+                        if (mounted) Navigator.pushNamed(context, '/screen7');
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         foregroundColor: Colors.white,
