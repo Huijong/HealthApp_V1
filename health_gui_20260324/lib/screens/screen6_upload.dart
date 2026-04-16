@@ -20,10 +20,13 @@ class _Screen6UploadState extends State<Screen6Upload> {
   String _activityName = 'Unknown';
   String _pos = '왼쪽';
   String _fit = '적당히';
-  String _training = '조깅';
+  String _training = '선택안함';
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _remarksController = TextEditingController();
-  final List<String> _trainingOptions = ['조깅', '인터벌', 'LSD', '변속주', '지속주'];
+  final TextEditingController _otherModelController = TextEditingController();
+  String _otherModel = '선택안함';
+  final List<String> _otherModelOptions = ['선택안함', '가민', '애플', '크로스', '직접 입력'];
+  final List<String> _trainingOptions = ['선택안함', '조깅', '인터벌', 'LSD', '변속주', '지속주'];
   Map<String, int> _badgeCounts = {
     '조깅': 0, '인터벌': 0, 'LSD': 0, '변속주': 0, '지속주': 0,
   };
@@ -363,12 +366,15 @@ class _Screen6UploadState extends State<Screen6Upload> {
         await Future.delayed(const Duration(seconds: 2));
       }
 
+      String finalOtherModel = _otherModel == '직접 입력' ? _otherModelController.text : _otherModel;
+
       service.invoke('startUpload', {
         'files': mappedFiles,
         'userId': _userId,
         'watchModel': _watchModel,
         'strap': _strap,
         'activityName': _activityName,
+        'otherModel': finalOtherModel,
         'pos': _pos,
         'fit': _fit,
         'training': _training,
@@ -393,6 +399,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
                  _logFiles.clear();
                  _locationController.clear();
                  _remarksController.clear();
+                 _otherModelController.clear();
               });
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드 성공!')));
               // 진행률 다이얼로그 닫은 후, 현재 화면(Screen 6)도 닫아서 Screen 5로 복귀!
@@ -491,6 +498,77 @@ class _Screen6UploadState extends State<Screen6Upload> {
 
               const SizedBox(height: 24),
 
+              _buildSectionTitle('동시에 착용한 타사 모델 선택', isDark),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _otherModel,
+                    isExpanded: true,
+                    icon: Icon(Icons.expand_more, color: primaryColor),
+                    dropdownColor: theme.colorScheme.surface,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.grey[900],
+                    ),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _otherModel = newValue;
+                        });
+                      }
+                    },
+                    items: _otherModelOptions.map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              if (_otherModel == '직접 입력') ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _otherModelController,
+                    decoration: InputDecoration(
+                      hintText: '직접 모델명을 입력해 주세요.',
+                      hintStyle: TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[400]),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+
               _buildSectionTitle('훈련 종류', isDark),
               const SizedBox(height: 12),
               Container(
@@ -532,7 +610,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(value),
-                            if (count > 0)
+                            if (count > 0 && value != '선택안함')
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                                 decoration: BoxDecoration(

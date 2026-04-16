@@ -132,6 +132,7 @@ void onStart(ServiceInstance service) async {
         'session_id': sessionId.toString(),
         'user_id': (userId ?? 'Unknown').toString(),
         'activity_name': (activityName ?? 'Unknown').toString(),
+        'other_model': (event['otherModel'] ?? '').toString(),
         'watch_model': (watchModel ?? 'Unknown').toString(),
         'strap': (strap ?? 'Unknown').toString(),
         'pos': (pos == null || pos.isEmpty) ? ' ' : pos.toString(),

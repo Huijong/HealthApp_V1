@@ -29,6 +29,18 @@ class _Screen3WatchModelState extends State<Screen3WatchModel> {
 
   final List<Map<String, String>> _models = [
     {
+      'title': 'Watch9 44mm',
+      'subtitle': 'Latest active style with large display',
+    },
+    {
+      'title': 'Watch9 40mm',
+      'subtitle': 'Latest compact and lightweight design',
+    },
+    {
+      'title': 'Watch Ultra 2',
+      'subtitle': 'Next generation maximum endurance and performance',
+    },
+    {
       'title': 'Watch8 Classic',
       'subtitle': 'Classic design with rotating bezel',
     },
@@ -41,7 +53,7 @@ class _Screen3WatchModelState extends State<Screen3WatchModel> {
       'subtitle': 'Compact and lightweight design',
     },
     {
-      'title': 'Watch 7 44mm',
+      'title': 'Watch7 44mm',
       'subtitle': 'Active style with large display',
     },
     {

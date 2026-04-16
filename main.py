@@ -164,6 +164,7 @@ async def upload_complete(
         session_id: str = Form(...),
         user_id: str = Form(...),
         activity_name: str = Form(default=""),
+        other_model: str = Form(default=""),
         watch_model: str = Form(...),
         strap: str = Form(...),
         pos: str = Form(...),
@@ -221,6 +222,7 @@ async def upload_complete(
     doc = {
         "user_id": user_id,
         "activity_name": activity_name,
+        "other_model": other_model,
         "watch_model": watch_model,
         "strap": strap,
         "pos": pos,
@@ -260,6 +262,7 @@ async def get_history(key: str = None):
 
             user_id = doc.get("user_id", "Unknown")
             activity_name = doc.get("activity_name", "-")
+            other_model = doc.get("other_model", "-")
             watch_model = doc.get("watch_model", "N/A")
             strap = doc.get("strap", "N/A")
             training = doc.get("training", "N/A")
@@ -286,6 +289,7 @@ async def get_history(key: str = None):
                 "time_str": time_str,
                 "user_id": str(user_id).strip(),
                 "activity_name": str(activity_name).strip(),
+                "other_model": str(other_model).strip(),
                 "watch_model": str(watch_model).strip(),
                 "strap": str(strap).strip(),
                 "training": str(training).strip(),
@@ -368,6 +372,7 @@ async def get_history(key: str = None):
                 <div class="summary-box">
                     <div class="stat-row"><div class="stat-title">사용자 ID</div> <div id="stat-user_id" style="flex-grow:1;"></div></div>
                     <div class="stat-row"><div class="stat-title">운동 이름</div> <div id="stat-activity_name" style="flex-grow:1;"></div></div>
+                    <div class="stat-row"><div class="stat-title">타사 모델</div> <div id="stat-other_model" style="flex-grow:1;"></div></div>
                     <div class="stat-row"><div class="stat-title">워치 모델</div> <div id="stat-watch_model" style="flex-grow:1;"></div></div>
                     <div class="stat-row"><div class="stat-title">스트랩</div> <div id="stat-strap" style="flex-grow:1;"></div></div>
                     <div class="stat-row"><div class="stat-title">운동 종류</div> <div id="stat-training" style="flex-grow:1;"></div></div>
@@ -380,6 +385,7 @@ async def get_history(key: str = None):
                 <div class="filters-box">
                     <select id="filter-user_id" onchange="applyFilters()"><option value="">사용자 ID (전체)</option></select>
                     <select id="filter-activity_name" onchange="applyFilters()"><option value="">운동 이름 (전체)</option></select>
+                    <select id="filter-other_model" onchange="applyFilters()"><option value="">타사 모델 (전체)</option></select>
                     <select id="filter-watch_model" onchange="applyFilters()"><option value="">워치 모델 (전체)</option></select>
                     <select id="filter-strap" onchange="applyFilters()"><option value="">스트랩 (전체)</option></select>
                     <select id="filter-training" onchange="applyFilters()"><option value="">운동 종류 (전체)</option></select>
@@ -395,6 +401,7 @@ async def get_history(key: str = None):
                             <th width="10%">수신 일시</th>
                             <th width="8%">사용자 ID</th>
                             <th width="10%">운동 이름</th>
+                            <th width="8%">타사 모델</th>
                             <th width="10%">워치 모델</th>
                             <th width="10%">스트랩</th>
                             <th width="8%">운동 종류</th>
@@ -484,6 +491,7 @@ async def get_history(key: str = None):
                                     <td>${{row.time_str}}</td>
                                     <td><strong>${{row.user_id}}</strong></td>
                                     <td>${{row.activity_name}}</td>
+                                    <td>${{row.other_model}}</td>
                                     <td><span style='color:#00796b; font-weight:bold;'>${{row.watch_model}}</span></td>
                                     <td><span>${{row.strap}}</span></td>
                                     <td><span class='badge'>${{row.training}}</span></td>
@@ -502,6 +510,7 @@ async def get_history(key: str = None):
                     function applyFilters() {{
                         const fUser = document.getElementById("filter-user_id").value;
                         const fActivity = document.getElementById("filter-activity_name").value;
+                        const fOtherModel = document.getElementById("filter-other_model").value;
                         const fWatch = document.getElementById("filter-watch_model").value;
                         const fStrap = document.getElementById("filter-strap").value;
                         const fTrain = document.getElementById("filter-training").value;
@@ -512,6 +521,7 @@ async def get_history(key: str = None):
                         const filtered = historyData.filter(row => {{
                             let ur = row.user_id || "없음";
                             let ar = row.activity_name || "없음";
+                            let om = row.other_model || "없음"; if(om.trim() === "-" || om.trim() === "") om = "없음";
                             let wr = row.watch_model || "없음";
                             let sr = row.strap || "없음";
                             let tr = row.training || "없음";
@@ -521,6 +531,7 @@ async def get_history(key: str = None):
 
                             if (fUser && ur !== fUser) return false;
                             if (fActivity && ar !== fActivity) return false;
+                            if (fOtherModel && om !== fOtherModel) return false;
                             if (fWatch && wr !== fWatch) return false;
                             if (fStrap && sr !== fStrap) return false;
                             if (fTrain && tr !== fTrain) return false;
@@ -537,6 +548,7 @@ async def get_history(key: str = None):
                     window.onload = function() {{
                         renderStats("user_id", "stat-user_id");
                         renderStats("activity_name", "stat-activity_name");
+                        renderStats("other_model", "stat-other_model");
                         renderStats("watch_model", "stat-watch_model");
                         renderStats("strap", "stat-strap");
                         renderStats("training", "stat-training");
@@ -546,6 +558,7 @@ async def get_history(key: str = None):
 
                         renderOptions("user_id", "filter-user_id");
                         renderOptions("activity_name", "filter-activity_name");
+                        renderOptions("other_model", "filter-other_model");
                         renderOptions("watch_model", "filter-watch_model");
                         renderOptions("strap", "filter-strap");
                         renderOptions("training", "filter-training");
