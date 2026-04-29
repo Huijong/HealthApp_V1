@@ -33,7 +33,7 @@ app = FastAPI()
 
 # ------------------------------------------------ #
 # 1. 저장 경로 설정
-UPLOAD_DIR = "D:/HealthApp_Data"
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "D:/HealthApp_Data")
 TEMP_DIR = os.path.join(UPLOAD_DIR, "temp")
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -41,16 +41,17 @@ if not os.path.exists(TEMP_DIR):
     os.makedirs(TEMP_DIR)
 
 # 2. 데이터베이스 연결
-client = AsyncIOMotorClient("mongodb://localhost:27017/")
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
+client = AsyncIOMotorClient(MONGO_URL)
 db = client["health_db"]
 collection = db["upload_history"]
 notices_collection = db["notices"]
 
 # 3. 보안 키
-SECRET_API_KEY = "my_private_key_50"
+SECRET_API_KEY = os.getenv("SECRET_API_KEY", "my_private_key_50")
 
 # 4. Firebase Admin 설정
-FIREBASE_KEY_PATH = r"D:\HealthApp_Server\service-account.json"
+FIREBASE_KEY_PATH = os.getenv("FIREBASE_KEY_PATH", r"D:\HealthApp_Server\service-account.json")
 try:
     if not firebase_admin._apps:
         cred = credentials.Certificate(FIREBASE_KEY_PATH)

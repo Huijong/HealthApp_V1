@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  fastapi:
+    build: .
+    container_name: healthapp_fastapi
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      # 호스트 경로가 아닌 내부 컨테이너 경로
+      - UPLOAD_DIR=/app/data/uploads
+      - MONGO_URL=mongodb://mongodb:27017/
+      - SECRET_API_KEY=my_private_key_50
+      - FIREBASE_KEY_PATH=/app/firebase/service-account.json
+    volumes:
+      # 업로드 폴더 마운트 (D:/HealthApp_Data)
+      - D:/HealthApp_Data:/app/data/uploads
+      # Firebase 인증키 임시 마운트 (폴더 구조에 맞게 수정!)
+      - D:/HealthApp_Server/service-account.json:/app/firebase/service-account.json:ro
+    depends_on:
+      - mongodb
+    networks:
+      - healthapp_network
+
+  mongodb:
+    image: mongo:6.0
+    container_name: healthapp_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      # MongoDB 데이터 볼륨 마운트 (로컬 D:/HealthApp_Data/mongo)
+      - D:/HealthApp_Data/mongo:/data/db
+    networks:
+      - healthapp_network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: healthapp_cloudflared
+    restart: always
+    command: tunnel run
+    # 터널을 통해 FastAPI 등 내부 서버에 접근할 수 있도록 네트워크 공유
+    networks:
+      - healthapp_network
+    volumes:
+      # Cloudflare 인증 파일 및 config 마운트
+      # config.yml 내부에서 "http://fastapi:8000"로 트래픽을 넘기도록 설정해야 합니다
+      - D:/HealthApp_Server/cloudflared:/home/nonroot/.cloudflared
+
+networks:
+  healthapp_network:
+    driver: bridge
