@@ -34,6 +34,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
   List<PlatformFile> _colaFiles = [];
   List<PlatformFile> _captureFiles = [];
   List<PlatformFile> _logFiles = [];
+  List<PlatformFile> _fitDataFiles = [];
   final ValueNotifier<double> _progressNotifier = ValueNotifier<double>(0.0);
 
   @override
@@ -265,6 +266,11 @@ class _Screen6UploadState extends State<Screen6Upload> {
         if (newFiles.isNotEmpty) {
           setState(() => _logFiles.addAll(newFiles));
         }
+      } else if (type == 'Fit file') {
+        final newFiles = await _pickCustomFiles('/storage/emulated/0/Download/삼성 헬스/fit', '', ['.fit']);
+        if (newFiles.isNotEmpty) {
+          setState(() => _fitDataFiles.addAll(newFiles));
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -274,7 +280,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
   }
 
   Future<void> _uploadFiles() async {
-    if (_colaFiles.isEmpty && _captureFiles.isEmpty && _logFiles.isEmpty) {
+    if (_colaFiles.isEmpty && _captureFiles.isEmpty && _logFiles.isEmpty && _fitDataFiles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('업로드할 파일을 먼저 선택하세요.')));
       return;
     }
@@ -283,6 +289,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
     if (_colaFiles.isEmpty) missingFiles.add('Cola');
     if (_captureFiles.isEmpty) missingFiles.add('Capture');
     if (_logFiles.isEmpty) missingFiles.add('Log');
+    if (_fitDataFiles.isEmpty) missingFiles.add('Fit file');
 
     if (missingFiles.isNotEmpty) {
       String missingStr = missingFiles.join(', ');
@@ -347,7 +354,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
     );
 
     try {
-      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles];
+      final allFiles = [..._colaFiles, ..._captureFiles, ..._logFiles, ..._fitDataFiles];
       if (allFiles.isEmpty) return;
 
       List<Map<String, dynamic>> mappedFiles = allFiles.map((e) => {
@@ -397,6 +404,7 @@ class _Screen6UploadState extends State<Screen6Upload> {
                  _colaFiles.clear();
                  _captureFiles.clear();
                  _logFiles.clear();
+                 _fitDataFiles.clear();
                  _locationController.clear();
                  _remarksController.clear();
                  _otherModelController.clear();
@@ -439,11 +447,13 @@ class _Screen6UploadState extends State<Screen6Upload> {
             children: [
               _buildSectionTitle('업로드 파일', isDark),
               const SizedBox(height: 12),
-              _buildUploadCard('Cola', '"COLA_FILE_" 로 시작하는 압축파일(.zip)', Icons.file_download, theme, isDark, primaryColor, _colaFiles),
+              _buildUploadCard('Cola', '모든 운동 센서 데이터', Icons.file_download, theme, isDark, primaryColor, _colaFiles),
               const SizedBox(height: 12),
-              _buildUploadCard('Capture', '/sdcard/DCIM/Screenshots/ 내 이미지', Icons.image, theme, isDark, primaryColor, _captureFiles),
+              _buildUploadCard('Capture', '화면 캡처 파일', Icons.image, theme, isDark, primaryColor, _captureFiles),
               const SizedBox(height: 12),
-              _buildUploadCard('Log', '"log_" 로 시작하는 압축파일(.zip)', Icons.folder_zip, theme, isDark, primaryColor, _logFiles),
+              _buildUploadCard('Log', '로그 파일', Icons.folder_zip, theme, isDark, primaryColor, _logFiles),
+              const SizedBox(height: 12),
+              _buildUploadCard('Fit file', '운동 센서 데이터(.fit)', Icons.fitness_center, theme, isDark, primaryColor, _fitDataFiles),
 
               const SizedBox(height: 40),
 
